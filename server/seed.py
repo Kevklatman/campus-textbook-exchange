@@ -17,6 +17,8 @@ def seed_users(fake, num_users=10):
             email=fake.unique.email(domain='example.edu'),
             name=fake.name()
         )
+        # Set a default password for all users
+        user.password_hash = 'password123'
         users.append(user)
         db.session.add(user)
     db.session.commit()

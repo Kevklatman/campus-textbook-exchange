@@ -183,6 +183,48 @@ class CheckSessionResource(Resource):
         if current_user.is_authenticated:
             return current_user.to_dict(), 200
         return {'error': '401 Unauthorized'}, 401
+    
+class SignupResource(Resource):
+    def post(self):
+        # Parse and validate incoming data
+        data = request.get_json()
+        if not data:
+            return {"message": "No input data provided"}, 400
+
+        # Extract fields
+        email = data.get('email')
+        name = data.get('name')
+        password = data.get('password')
+
+        if not email or not password:
+            return {"message": "Email and password are required"}, 400
+
+        # Validate email
+        try:
+            User.validate_email(email)
+        except ValueError as e:
+            return {"message": str(e)}, 400
+
+        # Check if email already exists
+        if User.query.filter_by(email=email).first():
+            return {"message": "Email already exists"}, 400
+
+        # Create a new User object
+        new_user = User(
+            email=email,
+            name=name
+        )
+        new_user.password_hash = password  # Hash the password
+
+        # Add and commit the new user to the database
+        db.session.add(new_user)
+        db.session.commit()
+
+        # Set session for the new user
+        session['user_id'] = new_user.id
+
+        return new_user.to_dict(), 201
+
 
 # Add the resource to the API
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
@@ -193,5 +235,6 @@ api.add_resource(WatchlistResource, '/watchlists')
 api.add_resource(LoginResource, '/login')
 api.add_resource(LogoutResource, '/logout')
 api.add_resource(CheckSessionResource, '/check-session')
+api.add_resource(SignupResource, '/signup')
 if __name__ == '__main__':
     app.run(debug=True)
