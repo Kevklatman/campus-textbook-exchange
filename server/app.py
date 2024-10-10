@@ -1,6 +1,6 @@
 from flask import Flask, jsonify
 from flask_restful import Resource, Api
-from models import db, Post, Textbook
+from models import db, Post, Textbook, User
 from config import app, api
 
 @app.route('/')
@@ -36,10 +36,17 @@ class TextBookResource(Resource):
                 return {"message": "Textbook not found"}, 404
             textbook_data = textbook.to_dict()
             return textbook_data, 200
+        
+class UserResource(Resource):
+    def get(self):
+        users = User.query.all()
+        users_data = [user.to_dict() for user in users]
+        return users_data, 200
 
 # Add the resource to the API
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
 api.add_resource(TextBookResource, '/textbooks', '/textbooks/<int:textbook_id>')
+api.add_resource(UserResource, '/users')
 
 if __name__ == '__main__':
     app.run(debug=True)

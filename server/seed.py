@@ -28,6 +28,7 @@ def seed_textbooks(fake, num_textbooks=10):
         textbook = Textbook(
             author=fake.name(),
             title=fake.sentence(nb_words=4),
+            subject=fake.word(),  # Add subject field
             isbn=fake.unique.random_int(min=1000000000000, max=9999999999999),
             img=fake.image_url()
         )
