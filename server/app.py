@@ -1,17 +1,7 @@
-#!/usr/bin/env python3
-
-# Standard library imports
-
-# Remote library imports
-from flask import request
-from flask_restful import Resource
-
-# Local imports
-from config import app, db, api
-# Add your model imports
-from models import *
-
-# Views go here!
+from flask import Flask, jsonify
+from flask_restful import Resource, Api
+from models import db, Post, Textbook
+from config import app, api
 
 @app.route('/')
 def index():
@@ -31,14 +21,25 @@ class PostResource(Resource):
                 return {"message": "Post not found"}, 404
             post_data = post.to_dict()
             return post_data, 200
+
 class TextBookResource(Resource):
-    def get(self):
-        textbooks = Textbook.query.all()
-        textbooks_data = [textbook.to_dict() for textbook in textbooks]
-        return textbooks_data, 200
-    
+    def get(self, textbook_id=None):
+        if textbook_id is None:
+            # Get all textbooks
+            textbooks = Textbook.query.all()
+            textbooks_data = [textbook.to_dict() for textbook in textbooks]
+            return textbooks_data, 200
+        else:
+            # Get a single textbook by ID
+            textbook = Textbook.query.get(textbook_id)
+            if textbook is None:
+                return {"message": "Textbook not found"}, 404
+            textbook_data = textbook.to_dict()
+            return textbook_data, 200
+
 # Add the resource to the API
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
-api.add_resource(TextBookResource, '/textbooks')
+api.add_resource(TextBookResource, '/textbooks', '/textbooks/<int:textbook_id>')
+
 if __name__ == '__main__':
     app.run(debug=True)

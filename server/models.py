@@ -8,8 +8,7 @@ import re
 class User(db.Model, SerializerMixin):
     __tablename__ = "users"
 
-    serialize_rules = ('-posts.user', '-comments.user', '-watchlist_textbooks')
-    serialize_only = ('users.id', 'users.name', 'users.email',)
+    serialize_only = ('id', 'email', 'name')
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
@@ -33,8 +32,7 @@ class User(db.Model, SerializerMixin):
 class Textbook(db.Model, SerializerMixin):
     __tablename__ = "textbooks"
 
-    serialize_rules = ('-posts.textbook', '-watchlists.textbook')
-    serialize_only = ('textbooks.id', 'textbooks.author', 'textbooks.title', 'textbook.isbn', 'textbook.img')
+    serialize_only = ('id', 'author', 'title', 'isbn', 'img')
 
     id = db.Column(db.Integer, primary_key=True)
     author = db.Column(db.String)
@@ -79,17 +77,14 @@ class Comment(db.Model, SerializerMixin):
 class Post(db.Model, SerializerMixin):
     __tablename__ = "posts"
 
-    serialize_rules = ('-user.posts', '-textbook.posts', '-comments.post', '-watchlists.post')
     serialize_only = ('textbook_id', 'user_id', 'price', 'condition', 'created_at')
-
 
     id = db.Column(db.Integer, primary_key=True)
     textbook_id = db.Column(db.Integer, db.ForeignKey('textbooks.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     price = db.Column(db.Integer)
-    condition =db.Column(db.String)
+    condition = db.Column(db.String)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
-
 
     user = relationship('User', back_populates='posts')
     textbook = relationship('Textbook', back_populates='posts')
