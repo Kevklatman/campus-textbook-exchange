@@ -31,9 +31,14 @@ class PostResource(Resource):
                 return {"message": "Post not found"}, 404
             post_data = post.to_dict()
             return post_data, 200
-
+class TextBookResource(Resource):
+    def get(self):
+        textbooks = Textbook.query.all()
+        textbooks_data = [textbook.to_dict() for textbook in textbooks]
+        return textbooks_data, 200
+    
 # Add the resource to the API
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
-
+api.add_resource(TextBookResource, '/textbooks')
 if __name__ == '__main__':
     app.run(debug=True)

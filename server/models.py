@@ -34,6 +34,7 @@ class Textbook(db.Model, SerializerMixin):
     __tablename__ = "textbooks"
 
     serialize_rules = ('-posts.textbook', '-watchlists.textbook')
+    serialize_only = ('textbooks.id', 'textbooks.author', 'textbooks.title', 'textbook.isbn', 'textbook.img')
 
     id = db.Column(db.Integer, primary_key=True)
     author = db.Column(db.String)
