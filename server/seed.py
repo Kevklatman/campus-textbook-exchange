@@ -43,6 +43,7 @@ def seed_posts(fake, users, textbooks, num_posts=20):
             textbook_id=rc(textbooks).id,
             user_id=rc(users).id,
             price=randint(10, 100),
+            condition=fake.text(max_nb_chars=200),  # Generate a descriptive text
             created_at=fake.date_time_this_year()
         )
         posts.append(post)
