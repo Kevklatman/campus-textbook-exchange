@@ -12,6 +12,7 @@ class User(db.Model, SerializerMixin):
 
     posts = relationship('Post', back_populates='user')
     comments = relationship('Comment', back_populates='user')
+    watchlist_textbooks = association_proxy('watchlists', 'textbook')
 
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, name={self.name})>"
@@ -26,6 +27,7 @@ class Textbook(db.Model, SerializerMixin):
     img = db.Column(db.String)
 
     posts = relationship('Post', back_populates='textbook')
+    watchlists = relationship('Watchlist', back_populates='textbook')
 
     def __repr__(self):
         return f"<Textbook(id={self.id}, title={self.title}, author={self.author})>"
@@ -69,7 +71,7 @@ class Watchlist(db.Model, SerializerMixin):
     textbook_id = db.Column(db.Integer, db.ForeignKey('textbooks.id'))
 
     post = relationship('Post', back_populates='watchlists')
-    textbook = relationship('Textbook')
+    textbook = relationship('Textbook', back_populates='watchlists')
 
     def __repr__(self):
         return f"<Watchlist(id={self.id}, post_id={self.post_id}, textbook_id={self.textbook_id})>"
