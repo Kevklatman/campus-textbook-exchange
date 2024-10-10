@@ -13,6 +13,9 @@ class User(db.Model, SerializerMixin):
     posts = relationship('Post', back_populates='user')
     comments = relationship('Comment', back_populates='user')
 
+    def __repr__(self):
+        return f"<User(id={self.id}, email={self.email}, name={self.name})>"
+
 class Textbook(db.Model, SerializerMixin):
     __tablename__ = "textbooks"
 
@@ -24,6 +27,9 @@ class Textbook(db.Model, SerializerMixin):
 
     posts = relationship('Post', back_populates='textbook')
 
+    def __repr__(self):
+        return f"<Textbook(id={self.id}, title={self.title}, author={self.author})>"
+
 class Comment(db.Model, SerializerMixin):
     __tablename__ = "comments"
 
@@ -34,6 +40,9 @@ class Comment(db.Model, SerializerMixin):
 
     user = relationship('User', back_populates='comments')
     post = relationship('Post', back_populates='comments')
+
+    def __repr__(self):
+        return f"<Comment(id={self.id}, user_id={self.user_id}, post_id={self.post_id})>"
 
 class Post(db.Model, SerializerMixin):
     __tablename__ = "posts"
@@ -49,6 +58,9 @@ class Post(db.Model, SerializerMixin):
     comments = relationship('Comment', back_populates='post')
     watchlists = relationship('Watchlist', back_populates='post')
 
+    def __repr__(self):
+        return f"<Post(id={self.id}, textbook_id={self.textbook_id}, user_id={self.user_id}, price={self.price})>"
+
 class Watchlist(db.Model, SerializerMixin):
     __tablename__ = "watchlists"
 
@@ -58,3 +70,6 @@ class Watchlist(db.Model, SerializerMixin):
 
     post = relationship('Post', back_populates='watchlists')
     textbook = relationship('Textbook')
+
+    def __repr__(self):
+        return f"<Watchlist(id={self.id}, post_id={self.post_id}, textbook_id={self.textbook_id})>"
