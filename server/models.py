@@ -24,6 +24,7 @@ class Textbook(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     author = db.Column(db.String)
     title = db.Column(db.String)
+    isbn = db.Column(db.Integer)
     img = db.Column(db.String)
 
 class Comment(db.Model, SerializerMixin):
