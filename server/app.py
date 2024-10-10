@@ -1,6 +1,6 @@
 from flask import Flask, jsonify
 from flask_restful import Resource, Api
-from models import db, Post, Textbook, User, Comment
+from models import db, Post, Textbook, User, Comment, Watchlist
 from config import app, api
 
 @app.route('/')
@@ -49,11 +49,18 @@ class CommentResource(Resource):
         comments_data = [comment.to_dict () for comment in comments]
         return comments_data, 200
     
+class WatchlistResource(Resource):
+    def get(self):
+        watchlists = Watchlist.query.all()
+        watchlist_data = [watchlist.to_dict() for watchlist in watchlists]
+        return watchlist_data, 200
+    
 
 # Add the resource to the API
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
 api.add_resource(TextBookResource, '/textbooks', '/textbooks/<int:textbook_id>')
 api.add_resource(UserResource, '/users')
 api.add_resource(CommentResource, '/comments')
+api.add_resource(WatchlistResource, '/watchlists')
 if __name__ == '__main__':
     app.run(debug=True)
