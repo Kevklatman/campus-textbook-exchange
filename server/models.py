@@ -8,6 +8,8 @@ import re
 class User(db.Model, SerializerMixin):
     __tablename__ = "users"
 
+    serialize_rules = ('-posts.user', '-comments.user', '-watchlist_textbooks')
+
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
     name = db.Column(db.String)
@@ -29,6 +31,8 @@ class User(db.Model, SerializerMixin):
 
 class Textbook(db.Model, SerializerMixin):
     __tablename__ = "textbooks"
+
+    serialize_rules = ('-posts.textbook', '-watchlists.textbook')
 
     id = db.Column(db.Integer, primary_key=True)
     author = db.Column(db.String)
@@ -57,6 +61,8 @@ class Textbook(db.Model, SerializerMixin):
 class Comment(db.Model, SerializerMixin):
     __tablename__ = "comments"
 
+    serialize_rules = ('-user.comments', '-post.comments')
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
@@ -70,6 +76,8 @@ class Comment(db.Model, SerializerMixin):
 
 class Post(db.Model, SerializerMixin):
     __tablename__ = "posts"
+
+    serialize_rules = ('-user.posts', '-textbook.posts', '-comments.post', '-watchlists.post')
 
     id = db.Column(db.Integer, primary_key=True)
     textbook_id = db.Column(db.Integer, db.ForeignKey('textbooks.id'), nullable=False)
@@ -87,6 +95,8 @@ class Post(db.Model, SerializerMixin):
 
 class Watchlist(db.Model, SerializerMixin):
     __tablename__ = "watchlists"
+
+    serialize_rules = ('-post.watchlists', '-textbook.watchlists')
 
     id = db.Column(db.Integer, primary_key=True)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
