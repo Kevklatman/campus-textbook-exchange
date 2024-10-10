@@ -1,6 +1,6 @@
 from flask import Flask, jsonify
 from flask_restful import Resource, Api
-from models import db, Post, Textbook, User
+from models import db, Post, Textbook, User, Comment
 from config import app, api
 
 @app.route('/')
@@ -42,11 +42,18 @@ class UserResource(Resource):
         users = User.query.all()
         users_data = [user.to_dict() for user in users]
         return users_data, 200
+    
+class CommentResource(Resource):
+    def get(self):
+        comments = Comment.query.all()
+        comments_data = [comment.to_dict () for comment in comments]
+        return comments_data, 200
+    
 
 # Add the resource to the API
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
 api.add_resource(TextBookResource, '/textbooks', '/textbooks/<int:textbook_id>')
 api.add_resource(UserResource, '/users')
-
+api.add_resource(CommentResource, '/comments')
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,7 +1,7 @@
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship
-from sqlalchemy import CheckConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, DateTime, func, BigInteger
 from config import db
 import re
 
@@ -10,9 +10,9 @@ class User(db.Model, SerializerMixin):
 
     serialize_only = ('id', 'email', 'name')
 
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(255), unique=True, nullable=False)
-    name = db.Column(db.String)
+    id = db.Column(Integer, primary_key=True)
+    email = db.Column(String(255), unique=True, nullable=False)
+    name = db.Column(String)
 
     posts = relationship('Post', back_populates='user')
     comments = relationship('Comment', back_populates='user')
@@ -34,12 +34,12 @@ class Textbook(db.Model, SerializerMixin):
 
     serialize_only = ('id', 'author', 'title', 'isbn', 'img')
 
-    id = db.Column(db.Integer, primary_key=True)
-    author = db.Column(db.String)
-    title = db.Column(db.String)
-    subject = db.Column(db.String)
-    isbn = db.Column(db.BigInteger, nullable=False)
-    img = db.Column(db.String)
+    id = db.Column(Integer, primary_key=True)
+    author = db.Column(String)
+    title = db.Column(String)
+    subject = db.Column(String)
+    isbn = db.Column(BigInteger, nullable=False)
+    img = db.Column(String)
 
     posts = relationship('Post', back_populates='textbook')
     watchlists = relationship('Watchlist', back_populates='textbook')
@@ -64,10 +64,10 @@ class Comment(db.Model, SerializerMixin):
 
     serialize_rules = ('-user.comments', '-post.comments')
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    id = db.Column(Integer, primary_key=True)
+    user_id = db.Column(Integer, ForeignKey('users.id'), nullable=False)
+    post_id = db.Column(Integer, ForeignKey('posts.id'), nullable=False)
+    created_at = db.Column(DateTime, server_default=func.now())
 
     user = relationship('User', back_populates='comments')
     post = relationship('Post', back_populates='comments')
@@ -80,16 +80,16 @@ class Post(db.Model, SerializerMixin):
 
     serialize_only = ('textbook_id', 'user_id', 'price', 'condition', 'created_at')
 
-    id = db.Column(db.Integer, primary_key=True)
-    textbook_id = db.Column(db.Integer, db.ForeignKey('textbooks.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    price = db.Column(db.Integer)
-    condition = db.Column(db.String)
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    id = db.Column(Integer, primary_key=True)
+    textbook_id = db.Column(Integer, ForeignKey('textbooks.id'), nullable=False)
+    user_id = db.Column(Integer, ForeignKey('users.id'), nullable=False)
+    price = db.Column(Integer)
+    condition = db.Column(String)
+    created_at = db.Column(DateTime, server_default=func.now())
 
     user = relationship('User', back_populates='posts')
     textbook = relationship('Textbook', back_populates='posts')
-    comments = relationship('Comment', back_populates='post')
+    comments = relationship('Comment', back_populates='post', cascade="all, delete-orphan")
     watchlists = relationship('Watchlist', back_populates='post')
 
     def __repr__(self):
@@ -100,9 +100,9 @@ class Watchlist(db.Model, SerializerMixin):
 
     serialize_rules = ('-post.watchlists', '-textbook.watchlists')
 
-    id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
-    textbook_id = db.Column(db.Integer, db.ForeignKey('textbooks.id'))
+    id = db.Column(Integer, primary_key=True)
+    post_id = db.Column(Integer, ForeignKey('posts.id'))
+    textbook_id = db.Column(Integer, ForeignKey('textbooks.id'))
 
     post = relationship('Post', back_populates='watchlists')
     textbook = relationship('Textbook', back_populates='watchlists')
