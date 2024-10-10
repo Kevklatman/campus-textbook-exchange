@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, make_response
 from flask_restful import Resource, Api
 from models import db, Post, Textbook, User, Comment, Watchlist
 from config import app, api
@@ -72,6 +72,42 @@ class PostResource(Resource):
         db.session.commit()
 
         return new_post.to_dict(), 201
+    
+
+    def delete(self, post_id):
+        # Retrieve the post by ID
+        post = Post.query.get(post_id)
+        if not post:
+            return {"message": "Post not found"}, 404
+
+        # Delete the post
+        db.session.delete(post)
+        db.session.commit()
+
+        return make_response({"message": "Post successfully deleted"}, 204)
+    
+
+    def patch(self, post_id):
+        # Retrieve the post by ID
+        post = Post.query.get(post_id)
+        if not post:
+            return {"message": "Post not found"}, 404
+
+        # Parse and validate incoming data
+        data = request.get_json()
+        if not data:
+            return {"message": "No input data provided"}, 400
+
+        # Update only the fields provided in the request
+        if 'price' in data:
+            post.price = data['price']
+        if 'condition' in data:
+            post.condition = data['condition']
+
+        # Commit changes to the database
+        db.session.commit()
+
+        return make_response(post.to_dict(), 200)
 
 
 
