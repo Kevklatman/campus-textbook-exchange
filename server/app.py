@@ -1,7 +1,15 @@
-from flask import Flask, jsonify, request, make_response
+from flask import Flask, jsonify, request, make_response, session
 from flask_restful import Resource, Api
-from models import db, Post, Textbook, User, Comment, Watchlist
-from config import app, api
+from models import Post, Textbook, User, Comment, Watchlist
+from config import *
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 @app.route('/')
 def index():
@@ -146,11 +154,44 @@ class WatchlistResource(Resource):
         return watchlist_data, 200
     
 
+
+class LoginResource(Resource):
+    def post(self):
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+
+        user = User.query.filter_by(username=username).first()
+        if user and user.authenticate(password):
+            login_user(user)
+            session['user_id'] = user.id
+            return user.to_dict(), 200
+        else:
+            return {'error': '401 Unauthorized'}, 401
+
+class LogoutResource(Resource):
+    def delete(self):
+        if current_user.is_authenticated:
+            logout_user()
+            session.pop('user_id', None)
+            return {}, 204
+        else:
+            return {'error': '401 Unauthorized'}, 401
+
+class CheckSessionResource(Resource):
+    def get(self):
+        if current_user.is_authenticated:
+            return current_user.to_dict(), 200
+        return {'error': '401 Unauthorized'}, 401
+
 # Add the resource to the API
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
 api.add_resource(TextBookResource, '/textbooks', '/textbooks/<int:textbook_id>')
 api.add_resource(UserResource, '/users')
 api.add_resource(CommentResource, '/comments')
 api.add_resource(WatchlistResource, '/watchlists')
+api.add_resource(LoginResource, '/login')
+api.add_resource(LogoutResource, '/logout')
+api.add_resource(CheckSessionResource, '/check-session')
 if __name__ == '__main__':
     app.run(debug=True)

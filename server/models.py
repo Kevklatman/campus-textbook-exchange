@@ -1,11 +1,13 @@
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
+from sqlalchemy.ext.hybrid import hybrid_property 
 from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, DateTime, func, BigInteger
-from config import db
+from config import db, bcrypt
+from flask_login import UserMixin
 import re
 
-class User(db.Model, SerializerMixin):
+class User(db.Model, SerializerMixin, UserMixin):
     __tablename__ = "users"
 
     serialize_only = ('id', 'email', 'name')
@@ -13,6 +15,7 @@ class User(db.Model, SerializerMixin):
     id = db.Column(Integer, primary_key=True)
     email = db.Column(String(255), unique=True, nullable=False)
     name = db.Column(String)
+    _password_hash = db.Column(db.String)
 
     posts = relationship('Post', back_populates='user')
     comments = relationship('Comment', back_populates='user')
@@ -28,6 +31,25 @@ class User(db.Model, SerializerMixin):
             raise ValueError("Email must be a string.")
         if not re.fullmatch(r'^[^@]+@[^@]+\.[eE][dD][uU]$', email):
             raise ValueError("Email must contain '@' and end with '.edu'.")
+        
+
+        #This will allow us to set password_hash directly inside the sqlite database. 
+    @hybrid_property
+    def password_hash(self):
+        raise AttributeError("Password hashes may not be viewed.")
+    
+    @password_hash.setter 
+    def password_hash(self,password):
+        #generate_passwoord_hash is a boiler plate(a built in) method that is given to us by bycrpt that encrypts plaintext 
+        password_hash = bcrypt.generate_password_hash(password.encode("utf-8"))
+        #the decode will make the password shorter in the database 
+        # Hash the password and store it
+        self._password_hash = password_hash.decode('utf-8')
+    
+    def authenticate(self, password):
+        #using a built in bcrypt method. This returns True or False
+        # Check if the provided password matches the hashed password
+        return bcrypt.check_password_hash(self._password_hash, password.encode('utf-8'))
 
 class Textbook(db.Model, SerializerMixin):
     __tablename__ = "textbooks"
@@ -109,3 +131,5 @@ class Watchlist(db.Model, SerializerMixin):
 
     def __repr__(self):
         return f"<Watchlist(id={self.id}, post_id={self.post_id}, textbook_id={self.textbook_id})>"
+
+
