@@ -1,7 +1,9 @@
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship
+from sqlalchemy import CheckConstraint
 from config import db
+import re
 
 class User(db.Model, SerializerMixin):
     __tablename__ = "users"
@@ -17,20 +19,40 @@ class User(db.Model, SerializerMixin):
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, name={self.name})>"
 
+    @staticmethod
+    def validate_email(email):
+        """Validate that the email contains '@' and ends with '.edu'."""
+        if not isinstance(email, str):
+            raise ValueError("Email must be a string.")
+        if not re.fullmatch(r'^[^@]+@[^@]+\.[eE][dD][uU]$', email):
+            raise ValueError("Email must contain '@' and end with '.edu'.")
+
 class Textbook(db.Model, SerializerMixin):
     __tablename__ = "textbooks"
 
     id = db.Column(db.Integer, primary_key=True)
     author = db.Column(db.String)
     title = db.Column(db.String)
-    isbn = db.Column(db.Integer)
+    isbn = db.Column(db.BigInteger, nullable=False)
     img = db.Column(db.String)
 
     posts = relationship('Post', back_populates='textbook')
     watchlists = relationship('Watchlist', back_populates='textbook')
 
+    __table_args__ = (
+        CheckConstraint('isbn >= 1000000000000 AND isbn < 10000000000000', name='check_isbn_length'),
+    )
+
     def __repr__(self):
         return f"<Textbook(id={self.id}, title={self.title}, author={self.author})>"
+
+    @staticmethod
+    def validate_isbn(isbn):
+        """Validate that the ISBN is a 13-digit integer."""
+        if not isinstance(isbn, int):
+            raise ValueError("ISBN must be an integer.")
+        if not (1000000000000 <= isbn < 10000000000000):
+            raise ValueError("ISBN must be a 13-digit integer.")
 
 class Comment(db.Model, SerializerMixin):
     __tablename__ = "comments"
