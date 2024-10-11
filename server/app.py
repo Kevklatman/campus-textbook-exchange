@@ -4,7 +4,10 @@ from models import Post, Textbook, User, Comment, Watchlist
 from config import *
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_uploads import configure_uploads
+from config import images
 
+configure_uploads(app, images)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -71,41 +74,27 @@ class PostResource(Resource):
 
         # Extract fields
         user_id = data.get('user_id')
-        author = data.get('author')
-        title = data.get('title')
-        isbn = data.get('isbn')
+        textbook_id = data.get('textbook_id')
         price = data.get('price')
         condition = data.get('condition')
-        image_url = data.get('image_url')  # Get the image URL from the request data
 
-        if not user_id or not author or not title or not isbn:
-            return {"message": "User ID, Author, Title, and ISBN are required"}, 400
-
-        # Validate ISBN
-        if not isinstance(isbn, int) or not (1000000000000 <= isbn < 10000000000000):
-            return {"message": "ISBN must be a 13-digit integer"}, 400
+        if not user_id or not textbook_id:
+            return {"message": "User ID and Textbook ID are required"}, 400
 
         # Check if user exists
         user = User.query.get(user_id)
         if not user:
             return {"message": "User not found"}, 404
 
-        # Check if textbook exists, if not create it
-        textbook = Textbook.query.filter_by(author=author, title=title).first()
+        # Check if textbook exists
+        textbook = Textbook.query.get(textbook_id)
         if not textbook:
-            textbook = Textbook(author=author, title=title, isbn=isbn)
-            try:
-                if image_url:
-                    textbook.img = image_url  # Set the image URL for the new textbook
-            except ValueError as e:
-                return {"message": str(e)}, 400
-            db.session.add(textbook)
-            db.session.commit()
+            return {"message": "Textbook not found"}, 404
 
         # Create a new Post object
         new_post = Post(
             user_id=user_id,
-            textbook_id=textbook.id,
+            textbook_id=textbook_id,
             price=price,
             condition=condition
         )
@@ -153,7 +142,8 @@ class PostResource(Resource):
 
 
 
-class TextBookResource(Resource):
+class TextbookResource(Resource):
+
     def get(self, textbook_id=None):
         if textbook_id is None:
             # Get all textbooks
@@ -167,6 +157,36 @@ class TextBookResource(Resource):
                 return {"message": "Textbook not found"}, 404
             textbook_data = textbook.to_dict()
             return textbook_data, 200
+    def post(self):
+        data = request.form
+        if not data:
+            return {"message": "No input data provided"}, 400
+
+        author = data.get('author')
+        title = data.get('title')
+        isbn = data.get('isbn')
+
+        if not author or not title or not isbn:
+            return {"message": "Author, Title, and ISBN are required"}, 400
+
+        # Validate ISBN
+        if not isinstance(isbn, int) or not (1000000000000 <= isbn < 10000000000000):
+            return {"message": "ISBN must be a 13-digit integer"}, 400
+
+        textbook = Textbook(author=author, title=title, isbn=isbn)
+
+        if 'image' in request.files:
+            image_file = request.files['image']
+            try:
+                filename = images.save(image_file)
+                textbook.img = filename
+            except UploadNotAllowed:
+                return {"message": "Invalid image file"}, 400
+
+        db.session.add(textbook)
+        db.session.commit()
+
+        return textbook.to_dict(), 201
         
 class UserResource(Resource):
     def get(self):
@@ -246,7 +266,7 @@ class LoginResource(Resource):
 
 # Add the resource to the API
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
-api.add_resource(TextBookResource, '/textbooks', '/textbooks/<int:textbook_id>')
+api.add_resource(TextbookResource, '/textbooks', '/textbooks/<int:textbook_id>')
 api.add_resource(UserResource, '/users')
 api.add_resource(CommentResource, '/comments')
 api.add_resource(WatchlistResource, '/watchlists')
@@ -254,5 +274,6 @@ api.add_resource(LoginResource, '/login')
 api.add_resource(LogoutResource, '/logout')
 api.add_resource(CheckSessionResource, '/check_session')
 api.add_resource(SignupResource, '/signup')
+
 if __name__ == '__main__':
     app.run(debug=True)

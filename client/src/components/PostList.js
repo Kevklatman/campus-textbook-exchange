@@ -1,28 +1,6 @@
-// src/components/PostList.js
-import React, { useEffect, useState } from "react";
+import React from "react";
 
-function PostList() {
-  const [posts, setPosts] = useState([]);
-
-  useEffect(() => {
-    // Fetch posts from the API when the component mounts
-    const fetchPosts = async () => {
-      try {
-        const response = await fetch("/posts");
-        if (response.ok) {
-          const data = await response.json();
-          setPosts(data);
-        } else {
-          console.error("Failed to fetch posts");
-        }
-      } catch (error) {
-        console.error("Error fetching posts:", error);
-      }
-    };
-
-    fetchPosts();
-  }, []);
-
+function PostList({ posts }) {
   return (
     <div className="post-list">
       <h2>Posts</h2>
@@ -33,9 +11,12 @@ function PostList() {
               <div className="post-header">
                 <p className="posted-by">Posted by: {post.user.email}</p>
               </div>
-              <h3>{post.textbook.title}</h3>
-              <img src={post.textbook.image_url} alt={post.textbook.title} className="post-image" />
-              <p>Author: {post.textbook.author}</p>
+              <h3>{post.title}</h3>
+              {post.image_url && (
+                <img src={post.image_url} alt={post.title} className="post-image" />
+              )}
+              <p>Author: {post.author}</p>
+              <p>ISBN: {post.isbn}</p>
               <p>Price: {post.price}</p>
               <p>Condition: {post.condition}</p>
             </li>

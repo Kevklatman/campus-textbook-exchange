@@ -8,7 +8,7 @@ from flask_bcrypt import Bcrypt
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
-
+from flask_uploads import UploadSet, IMAGES, configure_uploads
 
 # Local imports
 
@@ -17,6 +17,12 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False
+
+# Configure Flask-Uploads
+app.config['UPLOADED_IMAGES_DEST'] = 'uploads/images'  # Set the destination directory
+ALLOWED_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif']
+images = UploadSet('images', IMAGES)
+configure_uploads(app, images)  # Configure the app with the upload set
 
 # Define metadata, instantiate db
 metadata = MetaData(naming_convention={
@@ -34,5 +40,4 @@ CORS(app)
 
 bcrypt = Bcrypt(app)
 
-
-app.secret_key = 'secret key'
+app.secret_key = 'your_secret_key_here'
