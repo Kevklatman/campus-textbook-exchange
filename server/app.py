@@ -195,7 +195,7 @@ class SignupResource(Resource):
         db.session.add(new_user)
         db.session.commit()
 
-        session['user_id'] = new_user.id
+        login_user(new_user)
 
         return new_user.to_dict(), 201
 
@@ -208,10 +208,9 @@ class LoginResource(Resource):
         user = User.query.filter_by(email=email).first()
         if user and user.authenticate(password):
             login_user(user)
-            session['user_id'] = user.id
             return user.to_dict(), 200
         else:
-            return {'error': '401 Unauthorized'}, 401
+            return {'error': 'Invalid email or password'}, 401
 
 
 # Add the resource to the API
@@ -222,7 +221,7 @@ api.add_resource(CommentResource, '/comments')
 api.add_resource(WatchlistResource, '/watchlists')
 api.add_resource(LoginResource, '/login')
 api.add_resource(LogoutResource, '/logout')
-api.add_resource(CheckSessionResource, '/check-session')
+api.add_resource(CheckSessionResource, '/check_session')
 api.add_resource(SignupResource, '/signup')
 if __name__ == '__main__':
     app.run(debug=True)

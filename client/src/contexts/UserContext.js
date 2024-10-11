@@ -18,10 +18,7 @@ export function UserProvider({ children }) {
         }
       })
       .then((userData) => {
-        setUser({
-          ...userData,
-          isAdmin: userData.role === 'admin', // Add isAdmin property based on user's role
-        });
+        setUser(userData);
         setLoading(false);
       })
       .catch((error) => {
@@ -32,10 +29,7 @@ export function UserProvider({ children }) {
   }, []);
 
   const login = (userData) => {
-    setUser({
-      ...userData,
-      isAdmin: userData.role === 'admin', // Add isAdmin property based on user's role
-    });
+    setUser(userData);
   };
 
   const logout = () => {

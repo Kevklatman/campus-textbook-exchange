@@ -1,4 +1,4 @@
-// src/components/Home.js
+// src/pages/Home.js
 import React, { useContext } from "react";
 import { UserContext } from "../contexts/UserContext";
 import { Link } from "react-router-dom";
