@@ -3,6 +3,8 @@ from flask_restful import Resource, Api
 from models import Post, Textbook, User, Comment, Watchlist
 from config import *
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -155,28 +157,11 @@ class WatchlistResource(Resource):
     
 
 
-class LoginResource(Resource):
-    def post(self):
-        data = request.get_json()
-        username = data.get('username')
-        password = data.get('password')
-
-        user = User.query.filter_by(username=username).first()
-        if user and user.authenticate(password):
-            login_user(user)
-            session['user_id'] = user.id
-            return user.to_dict(), 200
-        else:
-            return {'error': '401 Unauthorized'}, 401
 
 class LogoutResource(Resource):
-    def delete(self):
-        if current_user.is_authenticated:
-            logout_user()
-            session.pop('user_id', None)
-            return {}, 204
-        else:
-            return {'error': '401 Unauthorized'}, 401
+    def post(self):
+        session.pop('user_id', None)
+        return {"message": "Logged out successfully"}, 200
 
 class CheckSessionResource(Resource):
     def get(self):
@@ -186,44 +171,47 @@ class CheckSessionResource(Resource):
     
 class SignupResource(Resource):
     def post(self):
-        # Parse and validate incoming data
         data = request.get_json()
         if not data:
             return {"message": "No input data provided"}, 400
 
-        # Extract fields
         email = data.get('email')
-        name = data.get('name')
         password = data.get('password')
 
         if not email or not password:
             return {"message": "Email and password are required"}, 400
 
-        # Validate email
         try:
             User.validate_email(email)
         except ValueError as e:
             return {"message": str(e)}, 400
 
-        # Check if email already exists
         if User.query.filter_by(email=email).first():
             return {"message": "Email already exists"}, 400
 
-        # Create a new User object
-        new_user = User(
-            email=email,
-            name=name
-        )
-        new_user.password_hash = password  # Hash the password
+        new_user = User(email=email)
+        new_user.password_hash = password
 
-        # Add and commit the new user to the database
         db.session.add(new_user)
         db.session.commit()
 
-        # Set session for the new user
         session['user_id'] = new_user.id
 
         return new_user.to_dict(), 201
+
+class LoginResource(Resource):
+    def post(self):
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+
+        user = User.query.filter_by(email=email).first()
+        if user and user.authenticate(password):
+            login_user(user)
+            session['user_id'] = user.id
+            return user.to_dict(), 200
+        else:
+            return {'error': '401 Unauthorized'}, 401
 
 
 # Add the resource to the API
