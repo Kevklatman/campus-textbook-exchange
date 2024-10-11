@@ -26,14 +26,41 @@ class PostResource(Resource):
         if post_id is None:
             # Get all posts
             posts = Post.query.all()
-            posts_data = [post.to_dict() for post in posts]
+            posts_data = []
+            for post in posts:
+                user = User.query.get(post.user_id)
+                textbook = Textbook.query.get(post.textbook_id)
+                post_data = post.to_dict()
+                post_data['user'] = {
+                    'id': user.id,
+                    'email': user.email
+                }
+                post_data['textbook'] = {
+                    'id': textbook.id,
+                    'title': textbook.title,
+                    'author': textbook.author,
+                    'image_url': textbook.img
+                }
+                posts_data.append(post_data)
             return posts_data, 200
         else:
             # Get a single post by ID
             post = Post.query.get(post_id)
             if post is None:
                 return {"message": "Post not found"}, 404
+            user = User.query.get(post.user_id)
+            textbook = Textbook.query.get(post.textbook_id)
             post_data = post.to_dict()
+            post_data['user'] = {
+                'id': user.id,
+                'email': user.email
+            }
+            post_data['textbook'] = {
+                'id': textbook.id,
+                'title': textbook.title,
+                'author': textbook.author,
+                'image_url': textbook.img
+            }
             return post_data, 200
 
     def post(self):
@@ -49,6 +76,7 @@ class PostResource(Resource):
         isbn = data.get('isbn')
         price = data.get('price')
         condition = data.get('condition')
+        image_url = data.get('image_url')  # Get the image URL from the request data
 
         if not user_id or not author or not title or not isbn:
             return {"message": "User ID, Author, Title, and ISBN are required"}, 400
@@ -66,6 +94,11 @@ class PostResource(Resource):
         textbook = Textbook.query.filter_by(author=author, title=title).first()
         if not textbook:
             textbook = Textbook(author=author, title=title, isbn=isbn)
+            try:
+                if image_url:
+                    textbook.img = image_url  # Set the image URL for the new textbook
+            except ValueError as e:
+                return {"message": str(e)}, 400
             db.session.add(textbook)
             db.session.commit()
 
@@ -82,7 +115,6 @@ class PostResource(Resource):
         db.session.commit()
 
         return new_post.to_dict(), 201
-    
 
     def delete(self, post_id):
         # Retrieve the post by ID
@@ -95,7 +127,6 @@ class PostResource(Resource):
         db.session.commit()
 
         return make_response({"message": "Post successfully deleted"}, 204)
-    
 
     def patch(self, post_id):
         # Retrieve the post by ID

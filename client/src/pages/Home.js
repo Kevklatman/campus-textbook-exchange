@@ -2,17 +2,18 @@
 import React, { useContext } from "react";
 import { UserContext } from "../contexts/UserContext";
 import { Link } from "react-router-dom";
+import PostList from "../components/PostList";
 
 function Home() {
-  const { user, logout } = useContext(UserContext);
+  const { user } = useContext(UserContext);
 
   return (
     <div className="home-container">
       <h1>Welcome to Our App</h1>
       {user ? (
         <div>
-          <p>Hello, {user.email}!</p>
-          <button onClick={logout}>Logout</button>
+          <p>You are logged in as {user.email}.</p>
+          <PostList />
         </div>
       ) : (
         <div>

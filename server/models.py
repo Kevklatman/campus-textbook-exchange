@@ -80,6 +80,15 @@ class Textbook(db.Model, SerializerMixin):
             raise ValueError("ISBN must be an integer.")
         if not (1000000000000 <= isbn < 10000000000000):
             raise ValueError("ISBN must be a 13-digit integer.")
+        
+
+    @validates('img')
+    def validate_image_url(self, key, url):
+        if not url:
+            return url
+        if not url.startswith('http://') and not url.startswith('https://'):
+            raise ValueError("Invalid image URL format.")
+        return url
 
 class Comment(db.Model, SerializerMixin):
     __tablename__ = "comments"
