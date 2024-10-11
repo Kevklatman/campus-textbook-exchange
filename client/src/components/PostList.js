@@ -11,12 +11,16 @@ function PostList({ posts }) {
               <div className="post-header">
                 <p className="posted-by">Posted by: {post.user.email}</p>
               </div>
-              <h3>{post.title}</h3>
-              {post.image_url && (
-                <img src={post.image_url} alt={post.title} className="post-image" />
+              <h3>{post.textbook.title}</h3>
+              {post.textbook.image_url && (
+                <img
+                  src={post.textbook.image_url}
+                  alt={post.textbook.title}
+                  className="post-image"
+                />
               )}
-              <p>Author: {post.author}</p>
-              <p>ISBN: {post.isbn}</p>
+              <p>Author: {post.textbook.author}</p>
+              <p>ISBN: {post.textbook.isbn}</p>
               <p>Price: {post.price}</p>
               <p>Condition: {post.condition}</p>
             </li>

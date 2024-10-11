@@ -4,8 +4,7 @@ from models import Post, Textbook, User, Comment, Watchlist
 from config import *
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_uploads import configure_uploads
-from config import images
+from flask_uploads import configure_uploads, UploadNotAllowed
 
 configure_uploads(app, images)
 
@@ -27,8 +26,14 @@ from models import db, Post, Textbook, User
 class PostResource(Resource):
     def get(self, post_id=None):
         if post_id is None:
-            # Get all posts
-            posts = Post.query.all()
+            user_id = request.args.get('user_id')
+            if user_id:
+                # Get posts created by the specified user
+                posts = Post.query.filter_by(user_id=user_id).all()
+            else:
+                # Get all posts
+                posts = Post.query.all()
+
             posts_data = []
             for post in posts:
                 user = User.query.get(post.user_id)
@@ -143,7 +148,6 @@ class PostResource(Resource):
 
 
 class TextbookResource(Resource):
-
     def get(self, textbook_id=None):
         if textbook_id is None:
             # Get all textbooks
@@ -157,6 +161,7 @@ class TextbookResource(Resource):
                 return {"message": "Textbook not found"}, 404
             textbook_data = textbook.to_dict()
             return textbook_data, 200
+
     def post(self):
         data = request.form
         if not data:
@@ -170,8 +175,11 @@ class TextbookResource(Resource):
             return {"message": "Author, Title, and ISBN are required"}, 400
 
         # Validate ISBN
-        if not isinstance(isbn, int) or not (1000000000000 <= isbn < 10000000000000):
-            return {"message": "ISBN must be a 13-digit integer"}, 400
+        try:
+            isbn = int(isbn)
+            Textbook.validate_isbn(isbn)
+        except ValueError as e:
+            return {"message": str(e)}, 400
 
         textbook = Textbook(author=author, title=title, isbn=isbn)
 
@@ -179,7 +187,7 @@ class TextbookResource(Resource):
             image_file = request.files['image']
             try:
                 filename = images.save(image_file)
-                textbook.img = filename
+                textbook.img = images.url(filename)  # Store the full image URL
             except UploadNotAllowed:
                 return {"message": "Invalid image file"}, 400
 
