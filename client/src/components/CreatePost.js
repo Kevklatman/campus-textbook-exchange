@@ -3,7 +3,7 @@ import React, { useState, useContext } from 'react';
 import { Redirect } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
 
-function CreatePost() {
+function CreatePost({ onNewPostCreated }) {
   const [author, setAuthor] = useState('');
   const [title, setTitle] = useState('');
   const [isbn, setIsbn] = useState('');
@@ -42,36 +42,61 @@ function CreatePost() {
     }
 
     const formData = new FormData();
-    formData.append('user_id', user.id);
     formData.append('author', author);
     formData.append('title', title);
     formData.append('isbn', parseInt(isbn, 10));
-    formData.append('price', price);
-    formData.append('condition', condition);
     if (imageFile) {
       formData.append('image', imageFile);
     }
 
     try {
-      const response = await fetch('/posts', {
+      // Create the textbook first
+      const textbookResponse = await fetch('/textbooks', {
         method: 'POST',
         body: formData,
       });
 
-      if (response.ok) {
-        // Post created successfully, redirect to the post list page or display a success message
-        console.log('Post created successfully');
-        // Reset form fields
-        setAuthor('');
-        setTitle('');
-        setIsbn('');
-        setPrice('');
-        setCondition('');
-        setImageFile(null);
-        setImagePreview(null);
-        setErrors({});
+      if (textbookResponse.ok) {
+        const textbookData = await textbookResponse.json();
+        const textbookId = textbookData.id;
+
+        // Create the post with the newly created textbook ID
+        const postData = {
+          user_id: user.id,
+          textbook_id: textbookId,
+          price: price,
+          condition: condition,
+        };
+
+        const postResponse = await fetch('/posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(postData),
+        });
+
+        if (postResponse.ok) {
+          // Post created successfully, redirect to the post list page or display a success message
+          console.log('Post created successfully');
+          // Reset form fields
+          setAuthor('');
+          setTitle('');
+          setIsbn('');
+          setPrice('');
+          setCondition('');
+          setImageFile(null);
+          setImagePreview(null);
+          setErrors({});
+
+          // Call the onNewPostCreated function passed from the Home component
+          onNewPostCreated();
+        } else {
+          console.error('Failed to create post');
+          // Display error message to the user
+        }
       } else {
-        console.error('Failed to create post');
+        console.error('Failed to create textbook');
         // Display error message to the user
       }
     } catch (error) {
