@@ -1,7 +1,11 @@
+// src/components/PostList.js
 import React from "react";
-import "../index.css"; // Import the CSS file
+import { Link } from "react-router-dom";
+import "../index.css";
 
 function PostList({ posts }) {
+  console.log('Posts:', posts);
+
   return (
     <div className="post-list">
       <h2>Posts</h2>
@@ -28,6 +32,11 @@ function PostList({ posts }) {
                 <p>Price: {post.price}</p>
                 <p>Condition: {post.condition}</p>
               </div>
+              {post.id && (
+                <Link to={`/posts/${post.id}`} className="view-details-link">
+                  View Details
+                </Link>
+              )}
             </li>
           ))}
         </ul>

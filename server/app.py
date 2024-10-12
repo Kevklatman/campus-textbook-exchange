@@ -39,6 +39,8 @@ class PostResource(Resource):
                 user = User.query.get(post.user_id)
                 textbook = Textbook.query.get(post.textbook_id)
                 post_data = post.to_dict()
+                post_data['id'] = post.id  # Add the 'id' field to the post_data dictionary
+
                 post_data['user'] = {
                     'id': user.id,
                     'email': user.email

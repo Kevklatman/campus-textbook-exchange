@@ -6,6 +6,7 @@ import { UserProvider } from "../contexts/UserContext";
 import Home from "../pages/Home";
 import CreatePost from "./CreatePost";
 import MyPosts from "../pages/MyPosts";
+import PostDetails from "../pages/PostDetails";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
             <Route path="/login" component={LoginAndRegister} />
             <Route path="/create-post" component={CreatePost} />
             <Route path="/my-posts" component={MyPosts} />
+            <Route path="/posts/:postId" component={PostDetails} />
           </Switch>
         </div>
       </Router>
