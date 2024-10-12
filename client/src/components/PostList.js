@@ -1,4 +1,5 @@
 import React from "react";
+import "../index.css"; // Import the CSS file
 
 function PostList({ posts }) {
   return (
@@ -7,22 +8,26 @@ function PostList({ posts }) {
       {posts.length > 0 ? (
         <ul>
           {posts.map((post) => (
-            <li key={post.id}>
+            <li key={post.id} className="post-item">
               <div className="post-header">
                 <p className="posted-by">Posted by: {post.user.email}</p>
               </div>
-              <h3>{post.textbook.title}</h3>
+              <h3 className="post-title">{post.textbook.title}</h3>
               {post.textbook.image_url && (
-                <img
-                  src={post.textbook.image_url}
-                  alt={post.textbook.title}
-                  className="post-image"
-                />
+                <div className="post-image-container">
+                  <img
+                    src={post.textbook.image_url}
+                    alt={post.textbook.title}
+                    className="post-image"
+                  />
+                </div>
               )}
-              <p>Author: {post.textbook.author}</p>
-              <p>ISBN: {post.textbook.isbn}</p>
-              <p>Price: {post.price}</p>
-              <p>Condition: {post.condition}</p>
+              <div className="post-details">
+                <p>Author: {post.textbook.author}</p>
+                <p>ISBN: {post.textbook.isbn}</p>
+                <p>Price: {post.price}</p>
+                <p>Condition: {post.condition}</p>
+              </div>
             </li>
           ))}
         </ul>
