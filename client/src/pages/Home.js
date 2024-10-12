@@ -3,7 +3,6 @@ import React, { useContext, useEffect, useState } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { Link } from 'react-router-dom';
 import PostList from '../components/PostList';
-import CreatePost from '../components/CreatePost';
 
 function Home() {
   const { user } = useContext(UserContext);
@@ -23,17 +22,11 @@ function Home() {
     fetchAllPosts();
   }, []);
 
-  const handleNewPostCreated = () => {
-    fetchAllPosts();
-  };
-
   return (
     <div className="home-container">
-      <h1>Welcome to Our App</h1>
+      <h1>Campus Textbook Exchange</h1>
       {user ? (
         <div>
-          <p>You are logged in as {user.email}.</p>
-          <CreatePost onNewPostCreated={handleNewPostCreated} />
           <PostList posts={allPosts} />
         </div>
       ) : (
