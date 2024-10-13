@@ -126,22 +126,24 @@ class PostResource(Resource):
 
         return make_response({"message": "Post successfully deleted"}, 204)
 
-    def patch(self, post_id):
+    def put(self, post_id):
         # Retrieve the post by ID
         post = Post.query.get(post_id)
         if not post:
             return {"message": "Post not found"}, 404
+
+        # Check if the current user is the owner of the post
+        if post.user_id != current_user.id:
+            return {"message": "Unauthorized"}, 401
 
         # Parse and validate incoming data
         data = request.get_json()
         if not data:
             return {"message": "No input data provided"}, 400
 
-        # Update only the fields provided in the request
-        if 'price' in data:
-            post.price = data['price']
-        if 'condition' in data:
-            post.condition = data['condition']
+        # Update the post fields
+        post.price = data.get('price', post.price)
+        post.condition = data.get('condition', post.condition)
 
         # Commit changes to the database
         db.session.commit()

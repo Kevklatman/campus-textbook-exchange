@@ -3,8 +3,10 @@ import React from "react";
 import { Link } from "react-router-dom";
 import "../index.css";
 
-function PostList({ posts }) {
-  console.log('Posts:', posts);
+function PostList({ posts, onEditPost, showEditButton }) {
+  const handleEditClick = (post) => {
+    onEditPost(post);
+  };
 
   return (
     <div className="post-list">
@@ -36,6 +38,9 @@ function PostList({ posts }) {
                 <Link to={`/posts/${post.id}`} className="view-details-link">
                   View Details
                 </Link>
+              )}
+              {showEditButton && (
+                <button onClick={() => handleEditClick(post)}>Edit</button>
               )}
             </li>
           ))}

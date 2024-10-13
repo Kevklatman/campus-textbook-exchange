@@ -1,33 +1,20 @@
 // src/pages/Home.js
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext } from 'react';
 import { UserContext } from '../contexts/UserContext';
+import { PostContext } from '../contexts/PostContext';
 import { Link } from 'react-router-dom';
 import PostList from '../components/PostList';
 
 function Home() {
   const { user } = useContext(UserContext);
-  const [allPosts, setAllPosts] = useState([]);
-
-  const fetchAllPosts = async () => {
-    try {
-      const response = await fetch('/posts');
-      const data = await response.json();
-      setAllPosts(data);
-    } catch (error) {
-      console.error('Error fetching all posts:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchAllPosts();
-  }, []);
+  const { posts } = useContext(PostContext);
 
   return (
     <div className="home-container">
       <h1>Campus Textbook Exchange</h1>
       {user ? (
         <div>
-          <PostList posts={allPosts} />
+          <PostList posts={posts} />
         </div>
       ) : (
         <div>

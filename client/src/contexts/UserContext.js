@@ -1,9 +1,9 @@
 // src/contexts/UserContext.js
 import React, { createContext, useState, useEffect } from "react";
 
-const UserContext = createContext();
+export const UserContext = createContext();
 
-function UserProvider({ children }) {
+export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -56,5 +56,3 @@ function UserProvider({ children }) {
     </UserContext.Provider>
   );
 }
-
-export { UserContext, UserProvider };
