@@ -1,4 +1,3 @@
-// src/components/CommentSection.js
 import React, { useState, useContext } from 'react';
 import { UserContext } from '../contexts/UserContext';
 
@@ -22,8 +21,8 @@ function CommentSection({ comments, onCommentSubmit }) {
       <h4>Comments:</h4>
       {comments && comments.length > 0 ? (
         <ul className="comments-list">
-          {comments.map((comment, index) => (
-            <li key={index}>
+          {comments.map((comment) => (
+            <li key={comment.id}>
               <p>{comment.user.email}: {comment.text}</p>
             </li>
           ))}

@@ -98,18 +98,19 @@ class Comment(db.Model, SerializerMixin):
     id = db.Column(Integer, primary_key=True)
     user_id = db.Column(Integer, ForeignKey('users.id'), nullable=False)
     post_id = db.Column(Integer, ForeignKey('posts.id'), nullable=False)
+    text = db.Column(String, nullable=False)
     created_at = db.Column(DateTime, server_default=func.now())
 
     user = relationship('User', back_populates='comments')
     post = relationship('Post', back_populates='comments')
 
     def __repr__(self):
-        return f"<Comment(id={self.id}, user_id={self.user_id}, post_id={self.post_id})>"
+        return f"<Comment(id={self.id}, user_id={self.user_id}, post_id={self.post_id}, text={self.text})>"
 
 class Post(db.Model, SerializerMixin):
     __tablename__ = "posts"
 
-    serialize_only = ('textbook_id', 'user_id', 'price', 'condition', 'created_at')
+    serialize_only = ('id', 'textbook_id', 'user_id', 'price', 'condition', 'created_at')
 
     id = db.Column(Integer, primary_key=True)
     textbook_id = db.Column(Integer, ForeignKey('textbooks.id'), nullable=False)

@@ -30,7 +30,7 @@ def seed_textbooks(fake, num_textbooks=10):
         textbook = Textbook(
             author=fake.name(),
             title=fake.sentence(nb_words=4),
-            subject=fake.word(),  # Add subject field
+            subject=fake.word(),
             isbn=fake.unique.random_int(min=1000000000000, max=9999999999999),
             img=fake.image_url()
         )
@@ -46,7 +46,7 @@ def seed_posts(fake, users, textbooks, num_posts=20):
             textbook_id=rc(textbooks).id,
             user_id=rc(users).id,
             price=randint(10, 100),
-            condition=fake.text(max_nb_chars=200),  # Generate a descriptive text
+            condition=rc(['New', 'Like New', 'Good', 'Fair']),
             created_at=fake.date_time_this_year()
         )
         posts.append(post)
@@ -59,6 +59,7 @@ def seed_comments(fake, users, posts, num_comments=30):
         comment = Comment(
             user_id=rc(users).id,
             post_id=rc(posts).id,
+            text=fake.paragraph(nb_sentences=3),  # Generate comment text
             created_at=fake.date_time_this_year()
         )
         db.session.add(comment)
@@ -66,9 +67,10 @@ def seed_comments(fake, users, posts, num_comments=30):
 
 def seed_watchlists(users, posts, num_watchlists=15):
     for _ in range(num_watchlists):
+        post = rc(posts)
         watchlist = Watchlist(
-            post_id=rc(posts).id,
-            textbook_id=rc(posts).textbook_id
+            post_id=post.id,
+            textbook_id=post.textbook_id
         )
         db.session.add(watchlist)
     db.session.commit()

@@ -1,4 +1,3 @@
-// src/pages/PostDetails.js
 import React, { useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
@@ -12,9 +11,13 @@ function PostDetails() {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        const response = await fetch(`/posts/${postId}`);
-        const data = await response.json();
-        setPost(data);
+        const [postResponse, commentsResponse] = await Promise.all([
+          fetch(`/posts/${postId}`),
+          fetch(`/posts/${postId}/comments`)
+        ]);
+        const postData = await postResponse.json();
+        const commentsData = await commentsResponse.json();
+        setPost({ ...postData, comments: commentsData });
       } catch (error) {
         console.error('Error fetching post:', error);
       }
@@ -34,9 +37,9 @@ function PostDetails() {
       });
 
       if (response.ok) {
-        const updatedPost = { ...post };
-        updatedPost.comments = [...(updatedPost.comments || []), { user: { email: user.email }, text: commentText }];
-        setPost(updatedPost);
+        const updatedCommentsResponse = await fetch(`/posts/${postId}/comments`);
+        const updatedCommentsData = await updatedCommentsResponse.json();
+        setPost((prevPost) => ({ ...prevPost, comments: updatedCommentsData }));
       }
     } catch (error) {
       console.error('Error submitting comment:', error);

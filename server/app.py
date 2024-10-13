@@ -51,6 +51,7 @@ class PostResource(Resource):
                     'author': textbook.author,
                     'image_url': textbook.img
                 }
+                post_data['comments'] = [comment.to_dict() for comment in post.comments]
                 posts_data.append(post_data)
             return posts_data, 200
         else:
@@ -71,6 +72,7 @@ class PostResource(Resource):
                 'author': textbook.author,
                 'image_url': textbook.img
             }
+            post_data['comments'] = [comment.to_dict() for comment in post.comments]
             return post_data, 200
 
     def post(self):
@@ -147,8 +149,6 @@ class PostResource(Resource):
         return make_response(post.to_dict(), 200)
 
 
-
-
 class TextbookResource(Resource):
     def get(self, textbook_id=None):
         if textbook_id is None:
@@ -197,27 +197,54 @@ class TextbookResource(Resource):
         db.session.commit()
 
         return textbook.to_dict(), 201
-        
+
 class UserResource(Resource):
     def get(self):
         users = User.query.all()
         users_data = [user.to_dict() for user in users]
         return users_data, 200
-    
+
 class CommentResource(Resource):
-    def get(self):
-        comments = Comment.query.all()
-        comments_data = [comment.to_dict () for comment in comments]
-        return comments_data, 200
-    
+    def get(self, post_id=None):
+        if post_id is None:
+            comments = Comment.query.all()
+            comments_data = [comment.to_dict() for comment in comments]
+            return comments_data, 200
+        else:
+            comments = Comment.query.filter_by(post_id=post_id).all()
+            comments_data = [comment.to_dict() for comment in comments]
+            return comments_data, 200
+
+    def post(self, post_id):
+        data = request.get_json()
+        if not data:
+            return {"message": "No input data provided"}, 400
+
+        text = data.get('text')
+
+        if not text:
+            return {"message": "Comment text is required"}, 400
+
+        # Check if the post exists
+        post = Post.query.get(post_id)
+        if not post:
+            return {"message": "Post not found"}, 404
+
+        # Get the currently logged-in user
+        user = current_user
+
+        new_comment = Comment(text=text, user_id=user.id, post_id=post_id)
+        db.session.add(new_comment)
+        db.session.commit()
+
+        return new_comment.to_dict(), 201
+
+
 class WatchlistResource(Resource):
     def get(self):
         watchlists = Watchlist.query.all()
         watchlist_data = [watchlist.to_dict() for watchlist in watchlists]
         return watchlist_data, 200
-    
-
-
 
 class LogoutResource(Resource):
     def post(self):
@@ -229,7 +256,7 @@ class CheckSessionResource(Resource):
         if current_user.is_authenticated:
             return current_user.to_dict(), 200
         return {'error': '401 Unauthorized'}, 401
-    
+
 class SignupResource(Resource):
     def post(self):
         data = request.get_json()
@@ -273,12 +300,11 @@ class LoginResource(Resource):
         else:
             return {'error': 'Invalid email or password'}, 401
 
-
-# Add the resource to the API
+# Add the resources to the API
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
 api.add_resource(TextbookResource, '/textbooks', '/textbooks/<int:textbook_id>')
 api.add_resource(UserResource, '/users')
-api.add_resource(CommentResource, '/comments')
+api.add_resource(CommentResource, '/comments', '/posts/<int:post_id>/comments')
 api.add_resource(WatchlistResource, '/watchlists')
 api.add_resource(LoginResource, '/login')
 api.add_resource(LogoutResource, '/logout')
