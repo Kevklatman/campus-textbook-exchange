@@ -42,7 +42,8 @@ class PostResource(Resource):
                     'id': textbook.id,
                     'title': textbook.title,
                     'author': textbook.author,
-                    'image_url': textbook.img
+                    'image_url': textbook.img,
+                    'isbn': textbook.isbn
                 }
                 post_data['comments'] = [comment.to_dict() for comment in post.comments]
                 posts_data.append(post_data)
@@ -76,6 +77,7 @@ class PostResource(Resource):
         textbook_id = data.get('textbook_id')
         price = data.get('price')
         condition = data.get('condition')
+        isbn = data.get('isbn')
 
         if not user_id or not textbook_id:
             return {"message": "User ID and Textbook ID are required"}, 400
@@ -87,6 +89,14 @@ class PostResource(Resource):
         textbook = Textbook.query.get(textbook_id)
         if not textbook:
             return {"message": "Textbook not found"}, 404
+
+        # Update the textbook's ISBN if provided
+        if isbn:
+            try:
+                Textbook.validate_isbn(isbn)
+                textbook.isbn = isbn
+            except ValueError as e:
+                return {"message": str(e)}, 400
 
         new_post = Post(
             user_id=user_id,
