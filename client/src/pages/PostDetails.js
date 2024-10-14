@@ -1,30 +1,31 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
+import { PostContext } from '../contexts/PostContext';
 import CommentSection from '../components/CommentSection';
 
 function PostDetails() {
   const { user } = useContext(UserContext);
+  const { posts } = useContext(PostContext);
   const { postId } = useParams();
   const [post, setPost] = useState(null);
 
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        const [postResponse, commentsResponse] = await Promise.all([
-          fetch(`/posts/${postId}`),
-          fetch(`/posts/${postId}/comments`)
-        ]);
-        const postData = await postResponse.json();
-        const commentsData = await commentsResponse.json();
-        setPost({ ...postData, comments: commentsData });
+        const foundPost = posts.find((post) => post.id === parseInt(postId));
+        if (foundPost) {
+          const commentsResponse = await fetch(`/posts/${postId}/comments`);
+          const commentsData = await commentsResponse.json();
+          setPost({ ...foundPost, comments: commentsData });
+        }
       } catch (error) {
         console.error('Error fetching post:', error);
       }
     };
 
     fetchPost();
-  }, [postId]);
+  }, [postId, posts]);
 
   const handleCommentSubmit = async (commentText) => {
     try {

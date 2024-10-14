@@ -125,6 +125,13 @@ class PostResource(Resource):
         post.price = data.get('price', post.price)
         post.condition = data.get('condition', post.condition)
 
+        textbook_data = data.get('textbook')
+        if textbook_data:
+            textbook = post.textbook
+            textbook.title = textbook_data.get('title', textbook.title)
+            textbook.author = textbook_data.get('author', textbook.author)
+            textbook.isbn = textbook_data.get('isbn', textbook.isbn)
+
         db.session.commit()
 
         return make_response(post.to_dict(), 200)
