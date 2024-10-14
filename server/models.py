@@ -17,9 +17,9 @@ class User(db.Model, SerializerMixin, UserMixin):
     name = db.Column(String)
     _password_hash = db.Column(db.String)
 
-    posts = relationship('Post', back_populates='user')
-    comments = relationship('Comment', back_populates='user')
-    watchlists = relationship('Watchlist', back_populates='user')  # Add this line
+    posts = relationship('Post', back_populates='user', cascade="all, delete-orphan")
+    comments = relationship('Comment', back_populates='user', cascade="all, delete-orphan")
+    watchlists = relationship('Watchlist', back_populates='user', cascade="all, delete-orphan")
     watchlist_textbooks = association_proxy('watchlists', 'textbook')
 
     def __repr__(self):
@@ -32,24 +32,17 @@ class User(db.Model, SerializerMixin, UserMixin):
             raise ValueError("Email must be a string.")
         if not re.fullmatch(r'^[^@]+@[^@]+\.[eE][dD][uU]$', email):
             raise ValueError("Email must contain '@' and end with '.edu'.")
-        
 
-        #This will allow us to set password_hash directly inside the sqlite database. 
     @hybrid_property
     def password_hash(self):
         raise AttributeError("Password hashes may not be viewed.")
     
     @password_hash.setter 
     def password_hash(self,password):
-        #generate_passwoord_hash is a boiler plate(a built in) method that is given to us by bycrpt that encrypts plaintext 
         password_hash = bcrypt.generate_password_hash(password.encode("utf-8"))
-        #the decode will make the password shorter in the database 
-        # Hash the password and store it
         self._password_hash = password_hash.decode('utf-8')
     
     def authenticate(self, password):
-        #using a built in bcrypt method. This returns True or False
-        # Check if the provided password matches the hashed password
         return bcrypt.check_password_hash(self._password_hash, password.encode('utf-8'))
 
 class Textbook(db.Model, SerializerMixin):
@@ -65,7 +58,7 @@ class Textbook(db.Model, SerializerMixin):
     img = db.Column(String)
 
     posts = relationship('Post', back_populates='textbook', cascade="all, delete-orphan")
-    watchlists = relationship('Watchlist', back_populates='textbook')
+    watchlists = relationship('Watchlist', back_populates='textbook', cascade="all, delete-orphan")
 
     __table_args__ = (
         CheckConstraint('isbn >= 1000000000000 AND isbn < 10000000000000', name='check_isbn_length'),
@@ -81,7 +74,6 @@ class Textbook(db.Model, SerializerMixin):
             raise ValueError("ISBN must be an integer.")
         if not (1000000000000 <= isbn < 10000000000000):
             raise ValueError("ISBN must be a 13-digit integer.")
-        
 
     @validates('img')
     def validate_image_url(self, key, url):
@@ -121,9 +113,10 @@ class Post(db.Model, SerializerMixin):
     created_at = db.Column(DateTime, server_default=func.now())
 
     user = relationship('User', back_populates='posts')
-    textbook = relationship('Textbook', back_populates='posts', cascade="all, delete")
+    textbook = relationship('Textbook', back_populates='posts')
     comments = relationship('Comment', back_populates='post', cascade="all, delete-orphan")
-    watchlists = relationship('Watchlist', back_populates='post')  # Add this line
+    watchlists = relationship('Watchlist', back_populates='post', cascade="all, delete-orphan")
+    watchlist_textbooks = association_proxy('watchlists', 'textbook')
 
     def __repr__(self):
         return f"<Post(id={self.id}, textbook_id={self.textbook_id}, user_id={self.user_id}, price={self.price})>"
@@ -136,13 +129,12 @@ class Watchlist(db.Model, SerializerMixin):
 
     id = db.Column(Integer, primary_key=True)
     user_id = db.Column(Integer, ForeignKey('users.id'))
-    post_id = db.Column(Integer, ForeignKey('posts.id'))  # Add this line
+    post_id = db.Column(Integer, ForeignKey('posts.id'))
     textbook_id = db.Column(Integer, ForeignKey('textbooks.id'))
 
     user = relationship('User', back_populates='watchlists')
-    post = relationship('Post', back_populates='watchlists')  # Add this line
+    post = relationship('Post', back_populates='watchlists')
     textbook = relationship('Textbook', back_populates='watchlists')
 
     def __repr__(self):
         return f"<Watchlist(id={self.id}, user_id={self.user_id}, post_id={self.post_id}, textbook_id={self.textbook_id})>"
-

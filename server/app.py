@@ -198,6 +198,24 @@ class UserResource(Resource):
         users_data = [user.to_dict() for user in users]
         return users_data, 200
 
+    def delete(self):
+        data = request.get_json()
+        user_id = data.get('id')
+
+        if not user_id:
+            return {'message': 'User ID is required.'}, 400
+
+        user = User.query.get(user_id)
+
+        if not user:
+            return {'message': 'User not found.'}, 404
+
+        db.session.delete(user)
+        db.session.commit()
+
+        return {'message': 'User deleted successfully.'}, 200
+
+
 class CommentResource(Resource):
     def get(self, post_id=None):
         if post_id is None:
