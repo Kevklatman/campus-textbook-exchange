@@ -1,11 +1,18 @@
 // src/components/PostList.js
-import React from "react";
+import React, { useContext } from "react";
 import { Link } from "react-router-dom";
+import { UserContext } from "../contexts/UserContext";
 import "../index.css";
 
-function PostList({ posts, onEditPost, showEditButton }) {
+function PostList({ posts, onEditPost, onDeletePost, showEditButton }) {
+  const { user } = useContext(UserContext);
+
   const handleEditClick = (post) => {
     onEditPost(post);
+  };
+
+  const handleDeleteClick = (postId) => {
+    onDeletePost(postId);
   };
 
   return (
@@ -39,8 +46,11 @@ function PostList({ posts, onEditPost, showEditButton }) {
                   View Details
                 </Link>
               )}
-              {showEditButton && (
-                <button onClick={() => handleEditClick(post)}>Edit</button>
+              {showEditButton && user && post.user.id === user.id && (
+                <>
+                  <button onClick={() => handleEditClick(post)}>Edit</button>
+                  <button onClick={() => handleDeleteClick(post.id)}>Delete</button>
+                </>
               )}
             </li>
           ))}

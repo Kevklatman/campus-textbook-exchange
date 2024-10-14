@@ -7,7 +7,7 @@ import EditPostForm from '../components/EditPostForm';
 
 function MyPosts() {
   const { user } = useContext(UserContext);
-  const { posts, updatePost } = useContext(PostContext);
+  const { posts, updatePost, deletePost } = useContext(PostContext);
   const [myPosts, setMyPosts] = useState([]);
   const [editingPost, setEditingPost] = useState(null);
 
@@ -42,6 +42,14 @@ function MyPosts() {
     }
   };
 
+  const handleDeletePost = async (postId) => {
+    try {
+      await deletePost(postId);
+    } catch (error) {
+      console.error('Error deleting post:', error);
+    }
+  };
+
   if (!user) {
     return <div>Please log in to view your posts.</div>;
   }
@@ -56,7 +64,12 @@ function MyPosts() {
           onCancel={() => setEditingPost(null)}
         />
       ) : (
-        <PostList posts={myPosts} onEditPost={handleEditPost} showEditButton={true} />
+        <PostList
+          posts={myPosts}
+          onEditPost={handleEditPost}
+          onDeletePost={handleDeletePost}
+          showEditButton={true}
+        />
       )}
     </div>
   );
