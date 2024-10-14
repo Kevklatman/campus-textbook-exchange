@@ -14,6 +14,7 @@ function Navbar() {
           <>
             <Link to="/create-post" style={{ margin: '0 10px', textDecoration: 'none', color: 'black' }}>Create Post</Link>
             <Link to="/my-posts" style={{ margin: '0 10px', textDecoration: 'none', color: 'black' }}>My Posts</Link>
+            <Link to="/watchlist" style={{ margin: '0 10px', textDecoration: 'none', color: 'black' }}>Watchlist</Link>
           </>
         )}
         {/* Add more navigation links as needed */}

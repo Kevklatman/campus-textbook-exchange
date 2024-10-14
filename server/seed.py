@@ -67,8 +67,10 @@ def seed_comments(fake, users, posts, num_comments=30):
 
 def seed_watchlists(users, posts, num_watchlists=15):
     for _ in range(num_watchlists):
+        user = rc(users)
         post = rc(posts)
         watchlist = Watchlist(
+            user_id=user.id,
             post_id=post.id,
             textbook_id=post.textbook_id
         )

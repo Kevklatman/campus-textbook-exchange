@@ -2,18 +2,36 @@
 import React, { useContext } from "react";
 import { Link } from "react-router-dom";
 import { UserContext } from "../contexts/UserContext";
+import { PostContext } from "../contexts/PostContext";
 import "../index.css";
 
-function PostList({ posts, onEditPost, onDeletePost, showEditButton }) {
+function PostList({ posts, onEditPost, showEditButton, onAddToWatchlist, onRemoveFromWatchlist }) {
   const { user } = useContext(UserContext);
+  const { deletePost } = useContext(PostContext);
 
   const handleEditClick = (post) => {
     onEditPost(post);
   };
 
   const handleDeleteClick = (postId) => {
-    onDeletePost(postId);
+    deletePost(postId);
   };
+
+  const handleWatchlistClick = (postId, textbookId) => {
+    if (onAddToWatchlist) {
+      onAddToWatchlist(postId, textbookId);
+    }
+  };
+
+  const handleRemoveFromWatchlistClick = (postId) => {
+    if (onRemoveFromWatchlist) {
+      onRemoveFromWatchlist(postId);
+    }
+  };
+
+  if (!posts || !Array.isArray(posts)) {
+    return <div>No posts available.</div>;
+  }
 
   return (
     <div className="post-list">
@@ -51,6 +69,16 @@ function PostList({ posts, onEditPost, onDeletePost, showEditButton }) {
                   <button onClick={() => handleEditClick(post)}>Edit</button>
                   <button onClick={() => handleDeleteClick(post.id)}>Delete</button>
                 </>
+              )}
+              {onAddToWatchlist && (
+                <button onClick={() => handleWatchlistClick(post.id, post.textbook.id)}>
+                  Add to Watchlist
+                </button>
+              )}
+              {onRemoveFromWatchlist && (
+                <button onClick={() => handleRemoveFromWatchlistClick(post.id)}>
+                  Remove from Watchlist
+                </button>
               )}
             </li>
           ))}

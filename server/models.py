@@ -19,6 +19,7 @@ class User(db.Model, SerializerMixin, UserMixin):
 
     posts = relationship('Post', back_populates='user')
     comments = relationship('Comment', back_populates='user')
+    watchlists = relationship('Watchlist', back_populates='user')  # Add this line
     watchlist_textbooks = association_proxy('watchlists', 'textbook')
 
     def __repr__(self):
@@ -122,7 +123,7 @@ class Post(db.Model, SerializerMixin):
     user = relationship('User', back_populates='posts')
     textbook = relationship('Textbook', back_populates='posts', cascade="all, delete")
     comments = relationship('Comment', back_populates='post', cascade="all, delete-orphan")
-    watchlists = relationship('Watchlist', back_populates='post')
+    watchlists = relationship('Watchlist', back_populates='post')  # Add this line
 
     def __repr__(self):
         return f"<Post(id={self.id}, textbook_id={self.textbook_id}, user_id={self.user_id}, price={self.price})>"
@@ -130,16 +131,18 @@ class Post(db.Model, SerializerMixin):
 class Watchlist(db.Model, SerializerMixin):
     __tablename__ = "watchlists"
 
-    serialize_rules = ('-post.watchlists', '-textbook.watchlists')
+    serialize_rules = ('-post.watchlists', '-textbook.watchlists', '-user.watchlists')
+    serialize_only = ('id', 'user_id', 'post_id', 'textbook_id')
 
     id = db.Column(Integer, primary_key=True)
-    post_id = db.Column(Integer, ForeignKey('posts.id'))
+    user_id = db.Column(Integer, ForeignKey('users.id'))
+    post_id = db.Column(Integer, ForeignKey('posts.id'))  # Add this line
     textbook_id = db.Column(Integer, ForeignKey('textbooks.id'))
 
-    post = relationship('Post', back_populates='watchlists')
+    user = relationship('User', back_populates='watchlists')
+    post = relationship('Post', back_populates='watchlists')  # Add this line
     textbook = relationship('Textbook', back_populates='watchlists')
 
     def __repr__(self):
-        return f"<Watchlist(id={self.id}, post_id={self.post_id}, textbook_id={self.textbook_id})>"
-
+        return f"<Watchlist(id={self.id}, user_id={self.user_id}, post_id={self.post_id}, textbook_id={self.textbook_id})>"
 

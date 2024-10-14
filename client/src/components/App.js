@@ -9,6 +9,7 @@ import Home from "../pages/Home";
 import CreatePost from "./CreatePost";
 import MyPosts from "../pages/MyPosts";
 import PostDetails from "../pages/PostDetails";
+import Watchlist from "../pages/Watchlist";
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
               <Route path="/create-post" component={CreatePost} />
               <Route path="/my-posts" component={MyPosts} />
               <Route path="/posts/:postId" component={PostDetails} />
+              <Route path="/watchlist" component={Watchlist} />
             </Switch>
           </div>
         </Router>
