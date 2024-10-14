@@ -120,11 +120,11 @@ class PostResource(Resource):
         if not post:
             return {"message": "Post not found"}, 404
 
-        # Delete the post
+        # Delete the post and the associated textbook
         db.session.delete(post)
         db.session.commit()
 
-        return make_response({"message": "Post successfully deleted"}, 204)
+        return make_response({"message": "Post and associated textbook successfully deleted"}, 204)
 
     def put(self, post_id):
         # Retrieve the post by ID

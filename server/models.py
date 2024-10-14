@@ -63,7 +63,7 @@ class Textbook(db.Model, SerializerMixin):
     isbn = db.Column(BigInteger, nullable=False)
     img = db.Column(String)
 
-    posts = relationship('Post', back_populates='textbook')
+    posts = relationship('Post', back_populates='textbook', cascade="all, delete-orphan")
     watchlists = relationship('Watchlist', back_populates='textbook')
 
     __table_args__ = (
@@ -120,7 +120,7 @@ class Post(db.Model, SerializerMixin):
     created_at = db.Column(DateTime, server_default=func.now())
 
     user = relationship('User', back_populates='posts')
-    textbook = relationship('Textbook', back_populates='posts')
+    textbook = relationship('Textbook', back_populates='posts', cascade="all, delete")
     comments = relationship('Comment', back_populates='post', cascade="all, delete-orphan")
     watchlists = relationship('Watchlist', back_populates='post')
 
