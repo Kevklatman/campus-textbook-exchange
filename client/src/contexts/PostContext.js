@@ -21,35 +21,26 @@ export const PostProvider = ({ children }) => {
     fetchAllPosts();
   }, []);
 
-    const updatePost = async (updatedPost) => {
-      try {
-        const response = await fetch(`/posts/${updatedPost.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatedPost),
-        });
-        if (response.ok) {
-          setPosts((prevPosts) =>
-            prevPosts.map((post) => (post.id === updatedPost.id ? updatedPost : post))
-          );
-    
-          // Check if the updated post is in any user's watchlist and if the price has dropped
-          const originalPost = posts.find((post) => post.id === updatedPost.id);
-          if (originalPost && updatedPost.price < originalPost.price) {
-            // Trigger email notifications (handled by the backend)
-            await fetch(`/posts/${updatedPost.id}/price-drop-notifications`, {
-              method: 'POST',
-            });
-          }
-        } else {
-          throw new Error('Error updating post');
-        }
-      } catch (error) {
-        console.error('Error updating post:', error);
+  const updatePost = async (updatedPost) => {
+    try {
+      const response = await fetch(`/posts/${updatedPost.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedPost),
+      });
+      if (response.ok) {
+        setPosts((prevPosts) =>
+          prevPosts.map((post) => (post.id === updatedPost.id ? updatedPost : post))
+        );
+      } else {
+        throw new Error('Error updating post');
       }
-    };
+    } catch (error) {
+      console.error('Error updating post:', error);
+    }
+  };
 
   const deletePost = async (postId) => {
     try {
