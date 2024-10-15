@@ -2,6 +2,7 @@
 import React, { useContext } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import axios from 'axios';
+import '../index.css';
 
 function AccountDetails() {
   const { user, setUser } = useContext(UserContext);
@@ -20,14 +21,16 @@ function AccountDetails() {
   };
 
   return (
-    <div>
+    <div className="account-details-container">
       <h2>Account Details</h2>
       {user ? (
         <div>
           <p>Email: {user.email}</p>
           <p>Name: {user.name}</p>
           {/* Add more account details as needed */}
-          <button onClick={handleDeleteAccount}>Delete Account</button>
+          <button className="delete-account-button" onClick={handleDeleteAccount}>
+            Delete Account
+          </button>
         </div>
       ) : (
         <p>Please log in to view your account details.</p>
