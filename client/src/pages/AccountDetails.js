@@ -1,3 +1,4 @@
+// src/components/AccountDetails.js
 import React, { useContext } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import axios from 'axios';
@@ -8,7 +9,7 @@ function AccountDetails() {
   const handleDeleteAccount = async () => {
     if (window.confirm('Are you sure you want to delete your account?')) {
       try {
-        await axios.delete('/users', { data: { id: user.id } });
+        await axios.delete(`/users/${user.id}`);
         setUser(null);
         // Redirect the user to the login page or any other appropriate page
         window.location.href = '/login';

@@ -37,6 +37,8 @@ export function UserProvider({ children }) {
       .then((res) => {
         if (res.ok) {
           setUser(null);
+          // Redirect the user to the login page or any other appropriate page
+          window.location.href = '/login';
         } else {
           throw new Error('Logout failed');
         }

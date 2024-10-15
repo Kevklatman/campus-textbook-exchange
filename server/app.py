@@ -198,13 +198,7 @@ class UserResource(Resource):
         users_data = [user.to_dict() for user in users]
         return users_data, 200
 
-    def delete(self):
-        data = request.get_json()
-        user_id = data.get('id')
-
-        if not user_id:
-            return {'message': 'User ID is required.'}, 400
-
+    def delete(self, user_id):
         user = User.query.get(user_id)
 
         if not user:
@@ -387,13 +381,13 @@ class LoginResource(Resource):
 
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
 api.add_resource(TextbookResource, '/textbooks', '/textbooks/<int:textbook_id>')
-api.add_resource(UserResource, '/users')
 api.add_resource(CommentResource, '/comments', '/posts/<int:post_id>/comments')
 api.add_resource(LoginResource, '/login')
 api.add_resource(LogoutResource, '/logout')
 api.add_resource(CheckSessionResource, '/check_session')
 api.add_resource(SignupResource, '/signup')
 api.add_resource(WatchlistResource, '/users/<int:user_id>/watchlist', '/users/<int:user_id>/watchlist/<int:post_id>')
+api.add_resource(UserResource, '/users', '/users/<int:user_id>')
 
 if __name__ == '__main__':
     app.run(debug=True)
