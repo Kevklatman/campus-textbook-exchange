@@ -192,6 +192,16 @@ class TextbookResource(Resource):
 
         return textbook.to_dict(), 201
 
+    def delete(self, textbook_id):
+        textbook = Textbook.query.get(textbook_id)
+        if textbook is None:
+            return {"message": "Textbook not found"}, 404
+
+        db.session.delete(textbook)
+        db.session.commit()
+
+        return {"message": "Textbook deleted successfully"}, 200
+
 class UserResource(Resource):
     def get(self):
         users = User.query.all()
@@ -203,6 +213,11 @@ class UserResource(Resource):
 
         if not user:
             return {'message': 'User not found.'}, 404
+
+        # Delete associated textbooks
+        for post in user.posts:
+            if post.textbook:
+                db.session.delete(post.textbook)
 
         db.session.delete(user)
         db.session.commit()

@@ -1,5 +1,4 @@
 from sqlalchemy_serializer import SerializerMixin
-from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.ext.hybrid import hybrid_property 
 from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, DateTime, func, BigInteger
@@ -20,7 +19,9 @@ class User(db.Model, SerializerMixin, UserMixin):
     posts = relationship('Post', back_populates='user', cascade="all, delete-orphan")
     comments = relationship('Comment', back_populates='user', cascade="all, delete-orphan")
     watchlists = relationship('Watchlist', back_populates='user', cascade="all, delete-orphan")
-    watchlist_textbooks = association_proxy('watchlists', 'textbook')
+
+    # Define a relationship to Textbook through Post
+    textbooks = relationship('Textbook', secondary='posts', viewonly=True)
 
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, name={self.name})>"
@@ -38,7 +39,7 @@ class User(db.Model, SerializerMixin, UserMixin):
         raise AttributeError("Password hashes may not be viewed.")
     
     @password_hash.setter 
-    def password_hash(self,password):
+    def password_hash(self, password):
         password_hash = bcrypt.generate_password_hash(password.encode("utf-8"))
         self._password_hash = password_hash.decode('utf-8')
     
@@ -59,6 +60,9 @@ class Textbook(db.Model, SerializerMixin):
 
     posts = relationship('Post', back_populates='textbook', cascade="all, delete-orphan")
     watchlists = relationship('Watchlist', back_populates='textbook', cascade="all, delete-orphan")
+
+    # Define a relationship to User through Post
+    users = relationship('User', secondary='posts', viewonly=True)
 
     __table_args__ = (
         CheckConstraint('isbn >= 1000000000000 AND isbn < 10000000000000', name='check_isbn_length'),
@@ -106,8 +110,8 @@ class Post(db.Model, SerializerMixin):
     serialize_only = ('id', 'textbook_id', 'user_id', 'price', 'condition', 'created_at')
 
     id = db.Column(Integer, primary_key=True)
-    textbook_id = db.Column(Integer, ForeignKey('textbooks.id'), nullable=False)
-    user_id = db.Column(Integer, ForeignKey('users.id'), nullable=False)
+    textbook_id = db.Column(Integer, ForeignKey('textbooks.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     price = db.Column(Integer)
     condition = db.Column(String)
     created_at = db.Column(DateTime, server_default=func.now())
@@ -116,7 +120,6 @@ class Post(db.Model, SerializerMixin):
     textbook = relationship('Textbook', back_populates='posts')
     comments = relationship('Comment', back_populates='post', cascade="all, delete-orphan")
     watchlists = relationship('Watchlist', back_populates='post', cascade="all, delete-orphan")
-    watchlist_textbooks = association_proxy('watchlists', 'textbook')
 
     def __repr__(self):
         return f"<Post(id={self.id}, textbook_id={self.textbook_id}, user_id={self.user_id}, price={self.price})>"
