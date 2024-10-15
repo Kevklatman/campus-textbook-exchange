@@ -1,12 +1,10 @@
 // src/pages/Watchlist.js
 import React, { useContext, useEffect, useState } from 'react';
 import { UserContext } from '../contexts/UserContext';
-import { PostContext } from '../contexts/PostContext';
 import PostList from '../components/PostList';
 
 function Watchlist() {
-  const { user } = useContext(UserContext);
-  const { watchlistPosts, setWatchlistPosts } = useContext(PostContext);
+  const { user, watchlistPosts, setWatchlistPosts } = useContext(UserContext);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -6,12 +6,11 @@ function WatchlistButton({ postId, textbookId }) {
   const { user, watchlistPosts, setWatchlistPosts } = useContext(UserContext);
 
   const isInWatchlist = (postId) => {
-    return watchlistPosts.some((post) => post.id === postId);
+    return watchlistPosts ? watchlistPosts.some((post) => post.id === postId) : false;
   };
 
-  const addToWatchlist = async (postId, textbookId) => {
+  const addToWatchlist = async () => {
     try {
-      // Make an API call to add the post to the user's watchlist
       const response = await fetch(`/users/${user.id}/watchlist`, {
         method: 'POST',
         headers: {
@@ -19,44 +18,31 @@ function WatchlistButton({ postId, textbookId }) {
         },
         body: JSON.stringify({ post_id: postId, textbook_id: textbookId }),
       });
-  
+
       if (response.ok) {
-        // Fetch the updated watchlist posts
         const updatedWatchlist = await response.json();
         setWatchlistPosts(updatedWatchlist);
-      } else {
-        console.error('Error adding post to watchlist');
       }
     } catch (error) {
-      console.error('Error adding post to watchlist:', error);
+      console.error('Error adding to watchlist:', error);
     }
   };
-  
-  const removeFromWatchlist = async (postId) => {
+
+  const removeFromWatchlist = async () => {
     try {
-      // Make an API call to remove the post from the user's watchlist
-      const response = await fetch(`/users/${user.id}/watchlist`, {
+      await fetch(`/users/${user.id}/watchlist/${postId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ post_id: postId }),
       });
-  
-      if (response.ok) {
-        // Fetch the updated watchlist posts
-        const updatedWatchlist = await response.json();
-        setWatchlistPosts(updatedWatchlist);
-      } else {
-        console.error('Error removing post from watchlist');
-      }
+      setWatchlistPosts(watchlistPosts.filter((post) => post.id !== postId));
     } catch (error) {
-      console.error('Error removing post from watchlist:', error);
+      console.error('Error removing from watchlist:', error);
     }
   };
 
   return (
-    <button onClick={() => (isInWatchlist(postId) ? removeFromWatchlist(postId) : addToWatchlist(postId, textbookId))}>
+    <button
+      onClick={isInWatchlist(postId) ? removeFromWatchlist : addToWatchlist}
+    >
       {isInWatchlist(postId) ? 'Remove from Watchlist' : 'Add to Watchlist'}
     </button>
   );

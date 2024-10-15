@@ -5,7 +5,6 @@ export const PostContext = createContext();
 
 export const PostProvider = ({ children }) => {
   const [posts, setPosts] = useState([]);
-  const [watchlistPosts, setWatchlistPosts] = useState([]);
 
   useEffect(() => {
     const fetchAllPosts = async () => {
@@ -52,7 +51,7 @@ export const PostProvider = ({ children }) => {
   };
 
   return (
-    <PostContext.Provider value={{ posts, updatePost, deletePost, watchlistPosts, setWatchlistPosts }}>
+    <PostContext.Provider value={{ posts, updatePost, deletePost }}>
       {children}
     </PostContext.Provider>
   );

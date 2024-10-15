@@ -1,11 +1,13 @@
+// src/components/PostDetails.js
 import React, { useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
 import { PostContext } from '../contexts/PostContext';
 import CommentSection from '../components/CommentSection';
+import WatchlistButton from '../components/WatchlistButton';
 
 function PostDetails() {
-  const { user } = useContext(UserContext);
+  const { user, watchlistPosts, setWatchlistPosts } = useContext(UserContext);
   const { posts } = useContext(PostContext);
   const { postId } = useParams();
   const [post, setPost] = useState(null);
@@ -66,6 +68,7 @@ function PostDetails() {
         <p>Condition: {post.condition}</p>
         <p>Posted by: {post.user.email}</p>
       </div>
+      <WatchlistButton postId={post.id} textbookId={post.textbook.id} />
       <CommentSection comments={post.comments} onCommentSubmit={handleCommentSubmit} />
     </div>
   );
