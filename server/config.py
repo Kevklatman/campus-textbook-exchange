@@ -1,4 +1,5 @@
 # Standard library imports
+import os
 
 # Remote library imports
 from flask import Flask
@@ -9,6 +10,7 @@ from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from flask_uploads import UploadSet, IMAGES, configure_uploads
+from flask_mail import Mail
 
 # Local imports
 
@@ -38,6 +40,19 @@ api = Api(app)
 # Instantiate CORS
 CORS(app)
 
+# Instantiate Bcrypt
 bcrypt = Bcrypt(app)
+
+# Configure Flask-Mail
+app.config['MAIL_SERVER'] = "smtp.gmail.com"  
+app.config['MAIL_PORT'] = 465  
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USE_SSL'] = True
+app.config['MAIL_USERNAME'] = ('campustextbookexchange@gmail.com')  
+app.config['MAIL_PASSWORD'] = ('')  #from kevin to kevin, remember to update this when running/ demonstrating app
+app.config['MAIL_DEFAULT_SENDER'] = ('campustextbookexchange@gmail.com')  
+
+# Instantiate Flask-Mail
+mail = Mail(app)
 
 app.secret_key = 'your_secret_key_here'

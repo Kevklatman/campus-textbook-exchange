@@ -6,6 +6,8 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_uploads import configure_uploads, UploadNotAllowed
 import logging
+from flask_mail import Message
+
 configure_uploads(app, images)
 
 login_manager = LoginManager()
@@ -14,6 +16,11 @@ login_manager.init_app(app)
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+def send_email(subject, recipients, body):
+    msg = Message(subject, recipients=recipients)
+    msg.body = body
+    mail.send(msg)
 
 @app.route('/')
 def index():
@@ -132,6 +139,8 @@ class PostResource(Resource):
         if not data:
             return {"message": "No input data provided"}, 400
 
+        original_price = post.price
+
         post.price = data.get('price', post.price)
         post.condition = data.get('condition', post.condition)
 
@@ -143,6 +152,16 @@ class PostResource(Resource):
             textbook.isbn = textbook_data.get('isbn', textbook.isbn)
 
         db.session.commit()
+
+        if post.price < original_price:
+            watchlist_items = Watchlist.query.filter_by(post_id=post_id).all()
+            for item in watchlist_items:
+                user = User.query.get(item.user_id)
+                if user:
+                    subject = f"Price Drop Alert: {post.textbook.title}"
+                    body = f"The price of {post.textbook.title} has dropped to {post.price}. Check it out now!"
+                    recipients = [user.email]
+                    send_email(subject, recipients, body)
 
         return make_response(post.to_dict(), 200)
 
@@ -393,6 +412,39 @@ class LoginResource(Resource):
             return user.to_dict(), 200
         else:
             return {'error': 'Invalid email or password'}, 401
+        
+
+class PriceDropNotificationResource(Resource):
+    def post(self, post_id):
+        post = Post.query.get(post_id)
+        if not post:
+            return {"message": "Post not found"}, 404
+
+        original_price = post.price
+        data = request.get_json()
+        if not data:
+            return {"message": "No input data provided"}, 400
+
+        new_price = data.get('price')
+        if not new_price:
+            return {"message": "Price is required"}, 400
+
+        if new_price >= original_price:
+            return {"message": "New price must be lower than the original price"}, 400
+
+        post.price = new_price
+        db.session.commit()
+
+        watchlist_items = Watchlist.query.filter_by(post_id=post_id).all()
+        for item in watchlist_items:
+            user = User.query.get(item.user_id)
+            if user:
+                subject = f"Price Drop Alert: {post.textbook.title}"
+                body = f"The price of {post.textbook.title} has dropped to {post.price}. Check it out now!"
+                recipients = [user.email]
+                send_email(subject, recipients, body)
+
+        return {"message": "Price drop notification sent successfully"}, 200
 
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
 api.add_resource(TextbookResource, '/textbooks', '/textbooks/<int:textbook_id>')
@@ -403,6 +455,6 @@ api.add_resource(CheckSessionResource, '/check_session')
 api.add_resource(SignupResource, '/signup')
 api.add_resource(WatchlistResource, '/users/<int:user_id>/watchlist', '/users/<int:user_id>/watchlist/<int:post_id>')
 api.add_resource(UserResource, '/users', '/users/<int:user_id>')
-
+api.add_resource(PriceDropNotificationResource, '/posts/<int:post_id>/price-drop-notifications', endpoint='price_drop_notifications')
 if __name__ == '__main__':
     app.run(debug=True)
