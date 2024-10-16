@@ -2,19 +2,23 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
 import CreatePost from '../components/CreatePost';
+import '../index.css'
 
 function CreatePostPage() {
   const history = useHistory();
 
   const handleNewPostCreated = () => {
-    // Redirect to the home page after successful post creation
     history.push('/');
   };
 
   return (
-    <div>
-      <h2>Create Post</h2>
-      <CreatePost onNewPostCreated={handleNewPostCreated} />
+    <div className="create-post-page">
+      <div className="container">
+        <h2 className="create-post-title">Create Post</h2>
+        <div className="create-post-content">
+          <CreatePost onNewPostCreated={handleNewPostCreated} />
+        </div>
+      </div>
     </div>
   );
 }

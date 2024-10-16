@@ -10,7 +10,7 @@ import CreatePost from "./CreatePost";
 import MyPosts from "../pages/MyPosts";
 import PostDetails from "../pages/PostDetails";
 import Watchlist from "../pages/Watchlist";
-import AccountDetails from "../pages/AccountDetails"; // Add this import
+import AccountDetails from "../pages/AccountDetails"; 
 
 function App() {
   return (
@@ -26,7 +26,7 @@ function App() {
               <Route path="/my-posts" component={MyPosts} />
               <Route path="/posts/:postId" component={PostDetails} />
               <Route path="/watchlist" component={Watchlist} />
-              <Route path="/account" component={AccountDetails} /> {/* Add this route */}
+              <Route path="/account" component={AccountDetails} /> 
             </Switch>
           </div>
         </Router>

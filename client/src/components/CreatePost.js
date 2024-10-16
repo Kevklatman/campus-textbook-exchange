@@ -1,4 +1,3 @@
-// src/components/CreatePost.js
 import React, { useState, useContext } from 'react';
 import { Redirect } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
@@ -44,59 +43,35 @@ function CreatePost({ onNewPostCreated }) {
     const formData = new FormData();
     formData.append('author', author);
     formData.append('title', title);
-    formData.append('isbn', parseInt(isbn, 10));
+    formData.append('isbn', isbn);
+    formData.append('price', price);
+    formData.append('condition', condition);
+    formData.append('user_id', user.id);
     if (imageFile) {
       formData.append('image', imageFile);
     }
 
     try {
-      // Create the textbook first
-      const textbookResponse = await fetch('/textbooks', {
+      const response = await fetch('/posts', {
         method: 'POST',
         body: formData,
       });
 
-      if (textbookResponse.ok) {
-        const textbookData = await textbookResponse.json();
-        const textbookId = textbookData.id;
+      if (response.ok) {
+        // Post created successfully, reset form fields
+        setAuthor('');
+        setTitle('');
+        setIsbn('');
+        setPrice('');
+        setCondition('');
+        setImageFile(null);
+        setImagePreview(null);
+        setErrors({});
 
-        // Create the post with the newly created textbook ID
-        const postData = {
-          user_id: user.id,
-          textbook_id: textbookId,
-          price: price,
-          condition: condition,
-        };
-
-        const postResponse = await fetch('/posts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(postData),
-        });
-
-        if (postResponse.ok) {
-          // Post created successfully, redirect to the post list page or display a success message
-          console.log('Post created successfully');
-          // Reset form fields
-          setAuthor('');
-          setTitle('');
-          setIsbn('');
-          setPrice('');
-          setCondition('');
-          setImageFile(null);
-          setImagePreview(null);
-          setErrors({});
-
-          // Call the onNewPostCreated function passed from the Home component
-          onNewPostCreated();
-        } else {
-          console.error('Failed to create post');
-          // Display error message to the user
-        }
+        // Call the onNewPostCreated function passed from the Home component
+        onNewPostCreated();
       } else {
-        console.error('Failed to create textbook');
+        console.error('Failed to create post');
         // Display error message to the user
       }
     } catch (error) {
@@ -142,7 +117,7 @@ function CreatePost({ onNewPostCreated }) {
         <div>
           <label htmlFor="isbn">ISBN:</label>
           <input
-            type="number"
+            type="text"
             id="isbn"
             value={isbn}
             onChange={(e) => setIsbn(e.target.value)}

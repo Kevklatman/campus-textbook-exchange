@@ -76,56 +76,48 @@ class PostResource(Resource):
             return post_data, 200
 
     def post(self):
-        data = request.get_json()
+        data = request.form
         if not data:
             return {"message": "No input data provided"}, 400
 
         user_id = data.get('user_id')
-        textbook_id = data.get('textbook_id')
+        isbn = data.get('isbn')
         price = data.get('price')
         condition = data.get('condition')
-        isbn = data.get('isbn')
 
-        if not user_id or not textbook_id:
-            return {"message": "User ID and Textbook ID are required"}, 400
+        if not user_id or not isbn:
+            return {"message": "User ID and ISBN are required"}, 400
 
-        user = User.query.get(user_id)
-        if not user:
-            return {"message": "User not found"}, 404
+        try:
+            isbn = int(isbn)
+            Textbook.validate_isbn(isbn)
+        except ValueError as e:
+            return {"message": str(e)}, 400
 
-        textbook = Textbook.query.get(textbook_id)
+        textbook = Textbook.query.filter_by(isbn=isbn).first()
         if not textbook:
-            return {"message": "Textbook not found"}, 404
+            # If the textbook doesn't exist, create a new textbook
+            textbook_data = {
+                'isbn': isbn,
+                'title': data.get('title', ''),
+                'author': data.get('author', '')
+            }
+            if 'image' in request.files:
+                image_file = request.files['image']
+                try:
+                    filename = images.save(image_file)
+                    textbook_data['img'] = images.url(filename)
+                except UploadNotAllowed:
+                    return {"message": "Invalid image file"}, 400
+            textbook = Textbook(**textbook_data)
+            db.session.add(textbook)
 
-        # Update the textbook's ISBN if provided
-        if isbn:
-            try:
-                Textbook.validate_isbn(isbn)
-                textbook.isbn = isbn
-            except ValueError as e:
-                return {"message": str(e)}, 400
+        post = Post(user_id=user_id, textbook=textbook, price=price, condition=condition)
 
-        new_post = Post(
-            user_id=user_id,
-            textbook_id=textbook_id,
-            price=price,
-            condition=condition
-        )
-
-        db.session.add(new_post)
+        db.session.add(post)
         db.session.commit()
 
-        return new_post.to_dict(), 201
-
-    def delete(self, post_id):
-        post = Post.query.get(post_id)
-        if not post:
-            return {"message": "Post not found"}, 404
-
-        db.session.delete(post)
-        db.session.commit()
-
-        return make_response({"message": "Post and associated textbook successfully deleted"}, 204)
+        return post.to_dict(), 201
 
     def put(self, post_id):
         post = Post.query.get(post_id)
@@ -196,6 +188,10 @@ class TextbookResource(Resource):
         except ValueError as e:
             return {"message": str(e)}, 400
 
+        existing_textbook = Textbook.query.filter_by(isbn=isbn).first()
+        if existing_textbook:
+            return existing_textbook.to_dict(), 200
+
         textbook = Textbook(author=author, title=title, isbn=isbn)
 
         if 'image' in request.files:
@@ -232,11 +228,6 @@ class UserResource(Resource):
 
         if not user:
             return {'message': 'User not found.'}, 404
-
-        # Delete associated textbooks
-        for post in user.posts:
-            if post.textbook:
-                db.session.delete(post.textbook)
 
         db.session.delete(user)
         db.session.commit()

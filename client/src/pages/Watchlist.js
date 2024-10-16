@@ -1,53 +1,46 @@
-// src/pages/Watchlist.js
-import React, { useContext, useEffect, useState } from 'react';
-import { UserContext } from '../contexts/UserContext';
-import { PostContext } from '../contexts/PostContext';
-import PostList from '../components/PostList';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
-function Watchlist() {
-  const { user } = useContext(UserContext);
-  const { watchlistPosts, setWatchlistPosts } = useContext(PostContext);
-  const [loading, setLoading] = useState(true);
+const Watchlist = ({ userId }) => {
+  const [watchlistItems, setWatchlistItems] = useState([]);
 
   useEffect(() => {
-    const fetchWatchlistPosts = async () => {
-      try {
-        const response = await fetch(`/users/${user.id}/watchlist`);
-        const data = await response.json();
-        setWatchlistPosts(data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching watchlist:', error);
-        setLoading(false);
-      }
-    };
+    fetchWatchlistItems();
+  }, []);
 
-    if (user) {
-      fetchWatchlistPosts();
-    }
-  }, [user, setWatchlistPosts]);
-
-  const removeFromWatchlist = async (postId) => {
+  const fetchWatchlistItems = async () => {
     try {
-      await fetch(`/users/${user.id}/watchlist/${postId}`, {
-        method: 'DELETE',
-      });
-      setWatchlistPosts(watchlistPosts.filter(post => post.id !== postId));
+      const response = await axios.get(`/users/${userId}/watchlist`);
+      setWatchlistItems(response.data);
     } catch (error) {
-      console.error('Error removing from watchlist:', error);
+      console.error('Error fetching watchlist items:', error);
     }
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  const removeFromWatchlist = async (postId) => {
+    try {
+      await axios.delete(`/users/${userId}/watchlist/${postId}`);
+      setWatchlistItems((prevItems) =>
+        prevItems.filter((item) => item.id !== postId)
+      );
+    } catch (error) {
+      console.error('Error removing item from watchlist:', error);
+    }
+  };
 
   return (
     <div>
-      <h1>My Watchlist</h1>
-      <PostList posts={watchlistPosts} onRemoveFromWatchlist={removeFromWatchlist} />
+      <h2>Watchlist</h2>
+      {watchlistItems.map((item) => (
+        <div key={item.id}>
+          <h3>{item.textbook.title}</h3>
+          <p>Price: {item.price}</p>
+          <p>Condition: {item.condition}</p>
+          <button onClick={() => removeFromWatchlist(item.id)}>Remove</button>
+        </div>
+      ))}
     </div>
   );
-}
+};
 
 export default Watchlist;
