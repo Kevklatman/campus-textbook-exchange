@@ -78,11 +78,19 @@ class Textbook(db.Model, SerializerMixin):
 
     @validates('isbn')
     def validate_isbn(self, key, isbn):
+        return self._validate_isbn(isbn)
+
+    @staticmethod
+    def _validate_isbn(isbn):
         if not isinstance(isbn, int):
             raise ValueError("ISBN must be an integer.")
         if not (1000000000000 <= isbn < 10000000000000):
             raise ValueError("ISBN must be a 13-digit integer.")
         return isbn
+
+    @classmethod
+    def validate_isbn(cls, isbn):
+        return cls._validate_isbn(isbn)
 
 class Comment(db.Model, SerializerMixin):
     __tablename__ = "comments"
