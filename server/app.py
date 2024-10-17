@@ -7,6 +7,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_uploads import configure_uploads, UploadNotAllowed
 import logging
 from flask_mail import Message
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 configure_uploads(app, images)
 
@@ -357,44 +361,73 @@ class SignupResource(Resource):
     def post(self):
         data = request.get_json()
         if not data:
+            logger.warning("No input data provided for signup")
             return {"message": "No input data provided"}, 400
 
         email = data.get('email')
         password = data.get('password')
 
         if not email or not password:
+            logger.warning("Email or password missing in signup attempt")
             return {"message": "Email and password are required"}, 400
 
         try:
-            User.validate_email(email)
+            User.validate_email_format(email)
         except ValueError as e:
+            logger.warning(f"Invalid email format in signup attempt: {email}")
             return {"message": str(e)}, 400
 
         if User.query.filter_by(email=email).first():
+            logger.warning(f"Signup attempt with existing email: {email}")
             return {"message": "Email already exists"}, 400
 
         new_user = User(email=email)
-        new_user.password_hash = password
+        new_user.password_hash = password  # This will use the setter method to hash the password
 
-        db.session.add(new_user)
-        db.session.commit()
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+            login_user(new_user)
+            logger.info(f"New user signed up and logged in: {email}")
+            return new_user.to_dict(), 201
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error during user signup: {str(e)}")
+            return {"message": f"An error occurred while creating the user: {str(e)}"}, 500
 
-        login_user(new_user)
-
-        return new_user.to_dict(), 201
+# ... rest of the file ...
 
 class LoginResource(Resource):
     def post(self):
         data = request.get_json()
+        
+        # Handle case where no data is sent
+        if not data:
+            logger.warning("No input data provided for login")
+            return {"message": "No input data provided"}, 400
+
         email = data.get('email')
         password = data.get('password')
 
+        # Handle case where email or password is missing
+        if not email or not password:
+            logger.warning("Email or password missing in login attempt")
+            return {"message": "Email and password are required"}, 400
+
         user = User.query.filter_by(email=email).first()
+
         if user and user.authenticate(password):
             login_user(user)
+            logger.info(f"User {email} logged in successfully")
             return user.to_dict(), 200
         else:
-            return {'error': 'Invalid email or password'}, 401
+            logger.warning(f"Failed login attempt for user: {email}")
+            return {"message": "Invalid email or password"}, 401
+
+    def get(self):
+        # Handle potential CORS preflight requests
+        return {'message': 'Login endpoint'}, 200
+
         
 
 

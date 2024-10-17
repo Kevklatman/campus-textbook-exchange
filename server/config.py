@@ -38,7 +38,7 @@ db.init_app(app)
 api = Api(app)
 
 # Instantiate CORS
-CORS(app)
+CORS(app, resources={r"/*": {"origins": os.getenv('FRONTEND_URL', 'http://localhost:3000')}})
 
 # Instantiate Bcrypt
 bcrypt = Bcrypt(app)

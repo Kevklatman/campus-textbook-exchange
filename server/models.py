@@ -2,8 +2,9 @@ from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.ext.hybrid import hybrid_property 
 from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, DateTime, func, BigInteger
-from config import db, bcrypt
 from flask_login import UserMixin
+from flask_bcrypt import generate_password_hash, check_password_hash
+from config import db
 import re
 
 class User(db.Model, SerializerMixin, UserMixin):
@@ -26,30 +27,35 @@ class User(db.Model, SerializerMixin, UserMixin):
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, name={self.name})>"
 
+    @validates('email')
+    def validate_email(self, key, email):
+        return User.validate_email_format(email)
+
     @staticmethod
-    def validate_email(email):
-        """Validate that the email contains '@' and ends with '.edu'."""
+    def validate_email_format(email):
         if not isinstance(email, str):
             raise ValueError("Email must be a string.")
         if not re.fullmatch(r'^[^@]+@[^@]+\.[eE][dD][uU]$', email):
             raise ValueError("Email must contain '@' and end with '.edu'.")
+        return email
 
-    @hybrid_property
+    @property
     def password_hash(self):
-        raise AttributeError("Password hashes may not be viewed.")
+        return self._password_hash
     
-    @password_hash.setter 
-    def password_hash(self, password):
-        password_hash = bcrypt.generate_password_hash(password.encode("utf-8"))
-        self._password_hash = password_hash.decode('utf-8')
+    @password_hash.setter
+    def password_hash(self, plain_text_password):
+        if plain_text_password is None:
+            raise ValueError("Password cannot be None")
+        self._password_hash = generate_password_hash(plain_text_password).decode('utf-8')
     
     def authenticate(self, password):
-        return bcrypt.check_password_hash(self._password_hash, password.encode('utf-8'))
+        return check_password_hash(self._password_hash, password)
 
 class Textbook(db.Model, SerializerMixin):
     __tablename__ = "textbooks"
 
-    serialize_only = ('id', 'author', 'title', 'isbn', 'img')
+    serialize_only = ('id', 'author', 'title', 'isbn')
 
     id = db.Column(Integer, primary_key=True)
     author = db.Column(String)
@@ -70,14 +76,13 @@ class Textbook(db.Model, SerializerMixin):
     def __repr__(self):
         return f"<Textbook(id={self.id}, title={self.title}, author={self.author})>"
 
-    @staticmethod
-    def validate_isbn(isbn):
-        """Validate that the ISBN is a 13-digit integer."""
+    @validates('isbn')
+    def validate_isbn(self, key, isbn):
         if not isinstance(isbn, int):
             raise ValueError("ISBN must be an integer.")
         if not (1000000000000 <= isbn < 10000000000000):
             raise ValueError("ISBN must be a 13-digit integer.")
-
+        return isbn
 
 class Comment(db.Model, SerializerMixin):
     __tablename__ = "comments"
@@ -94,12 +99,12 @@ class Comment(db.Model, SerializerMixin):
     post = relationship('Post', back_populates='comments')
 
     def __repr__(self):
-        return f"<Comment(id={self.id}, user_id={self.user_id}, post_id={self.post_id}, text={self.text})>"
+        return f"<Comment(id={self.id}, user_id={self.user_id}, post_id={self.post_id})>"
 
 class Post(db.Model, SerializerMixin):
     __tablename__ = "posts"
 
-    serialize_only = ('id', 'textbook_id', 'user_id', 'price', 'condition', 'created_at')
+    serialize_only = ('id', 'textbook_id', 'user_id', 'price', 'condition', 'created_at', 'img')
 
     id = db.Column(Integer, primary_key=True)
     textbook_id = db.Column(Integer, ForeignKey('textbooks.id', ondelete='CASCADE'), nullable=False)
@@ -107,8 +112,7 @@ class Post(db.Model, SerializerMixin):
     price = db.Column(Integer)
     condition = db.Column(String)
     created_at = db.Column(DateTime, server_default=func.now())
-    img = db.Column(String)  # Added img column
-
+    img = db.Column(String)
 
     user = relationship('User', back_populates='posts')
     textbook = relationship('Textbook', back_populates='posts')
@@ -117,11 +121,10 @@ class Post(db.Model, SerializerMixin):
 
     def __repr__(self):
         return f"<Post(id={self.id}, textbook_id={self.textbook_id}, user_id={self.user_id}, price={self.price})>"
+
     @validates('img')
     def validate_image_url(self, key, url):
-        if not url:
-            return url
-        if not url.startswith('http://') and not url.startswith('https://'):
+        if url and not (url.startswith('http://') or url.startswith('https://')):
             raise ValueError("Invalid image URL format.")
         return url
 

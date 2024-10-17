@@ -24,6 +24,7 @@ function LoginAndRegister() {
   const [error, setError] = useState(null);
 
   const handleLogin = async (values, { setSubmitting }) => {
+    setError(null); // Clear any previous errors
     try {
       const response = await fetch("/login", {
         method: "POST",
@@ -32,14 +33,17 @@ function LoginAndRegister() {
         },
         body: JSON.stringify(values),
       });
+      
+      const data = await response.json();
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Login failed");
+        throw new Error(data.message || "Login failed");
       }
-      const userData = await response.json();
-      login(userData);
+      
+      login(data);
       history.push("/");
     } catch (error) {
+      console.error("Login error:", error);
       setError(error.message);
     } finally {
       setSubmitting(false);
