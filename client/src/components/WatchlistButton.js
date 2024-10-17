@@ -1,10 +1,12 @@
 // src/components/WatchlistButton.js
 import React, { useContext } from 'react';
 import { UserContext } from '../contexts/UserContext';
+import { PostContext } from '../contexts/PostContext';
 import '../index.css';
 
 function WatchlistButton({ postId, textbookId }) {
-  const { user, watchlistPosts, setWatchlistPosts } = useContext(UserContext);
+  const { user } = useContext(UserContext);
+  const { watchlistPosts, setWatchlistPosts } = useContext(PostContext);
 
   const isInWatchlist = (postId) => {
     return watchlistPosts ? watchlistPosts.some((post) => post.id === postId) : false;

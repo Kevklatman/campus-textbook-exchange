@@ -58,6 +58,7 @@ function PostList({ posts, onEditPost, showEditButton, onAddToWatchlist, onRemov
                 <p>ISBN: {post.textbook.isbn}</p>
                 <p>Price: {post.price}</p>
                 <p>Condition: {post.condition}</p>
+                <p>{post.image}</p>
               </div>
               {post.id && (
                 <Link to={`/posts/${post.id}`} className="view-details-link">

@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+// src/components/Watchlist.js
+import React, { useEffect, useContext } from 'react';
+import { PostContext } from '../contexts/PostContext';
+import { UserContext } from '../contexts/UserContext';
 
-const Watchlist = ({ userId }) => {
-  const [watchlistItems, setWatchlistItems] = useState([]);
+const Watchlist = () => {
+  const { watchlistPosts, setWatchlistPosts } = useContext(PostContext);
+  const { user } = useContext(UserContext);
 
   useEffect(() => {
     fetchWatchlistItems();
@@ -10,8 +13,9 @@ const Watchlist = ({ userId }) => {
 
   const fetchWatchlistItems = async () => {
     try {
-      const response = await axios.get(`/users/${userId}/watchlist`);
-      setWatchlistItems(response.data);
+      const response = await fetch(`/users/${user.id}/watchlist`);
+      const data = await response.json();
+      setWatchlistPosts(data);
     } catch (error) {
       console.error('Error fetching watchlist items:', error);
     }
@@ -19,10 +23,10 @@ const Watchlist = ({ userId }) => {
 
   const removeFromWatchlist = async (postId) => {
     try {
-      await axios.delete(`/users/${userId}/watchlist/${postId}`);
-      setWatchlistItems((prevItems) =>
-        prevItems.filter((item) => item.id !== postId)
-      );
+      await fetch(`/users/${user.id}/watchlist/${postId}`, {
+        method: 'DELETE',
+      });
+      setWatchlistPosts((prevItems) => prevItems.filter((item) => item.id !== postId));
     } catch (error) {
       console.error('Error removing item from watchlist:', error);
     }
@@ -31,7 +35,7 @@ const Watchlist = ({ userId }) => {
   return (
     <div>
       <h2>Watchlist</h2>
-      {watchlistItems.map((item) => (
+      {watchlistPosts.map((item) => (
         <div key={item.id}>
           <h3>{item.textbook.title}</h3>
           <p>Price: {item.price}</p>

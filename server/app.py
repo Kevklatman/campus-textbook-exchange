@@ -65,6 +65,7 @@ class PostResource(Resource):
         isbn = data.get('isbn')
         price = data.get('price')
         condition = data.get('condition')
+        image = data.get('image')
 
         if not user_id or not isbn or not price or not condition:
             return {"message": "User ID, ISBN, price, and condition are required"}, 400
@@ -106,6 +107,7 @@ class PostResource(Resource):
             post_data = post.to_dict()
             post_data['textbook'] = textbook.to_dict()
             post_data['user'] = user.to_dict()
+            post_data['image']=image.to_dict()
 
             return post_data, 201
         except Exception as e:
