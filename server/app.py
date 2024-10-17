@@ -99,15 +99,16 @@ class PostResource(Resource):
 
         try:
             post = Post(user_id=user_id, textbook=textbook, price=price, condition=condition)
-
+            
             if 'image' in files:
                 image_file = files['image']
                 if image_file:
                     print("Uploading image to Cloudinary...")
+                    # Upload to Cloudinary
                     upload_result = upload(image_file)
                     print("Cloudinary upload result:", upload_result)
                     post.img = upload_result['public_id']
-
+            
             db.session.add(post)
             db.session.commit()
 
