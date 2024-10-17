@@ -55,7 +55,7 @@ class PostResource(Resource):
                     'author': textbook.author,
                     'isbn': textbook.isbn
                 }
-                post_data['image_url'] = post.img  # Use post's image instead of textbook's
+                post_data['img'] = post.img  # Include the image URL directly in the post data
                 post_data['comments'] = [comment.to_dict() for comment in post.comments]
                 posts_data.append(post_data)
             return posts_data, 200

@@ -55,15 +55,15 @@ function PostDetails() {
   return (
     <div className="post-details-container">
       <h2>{post.textbook.title}</h2>
-      {post.textbook.image_url && (
+      {post.img && (
         <div className="post-image-container">
-          <img src={post.textbook.image_url} alt={post.textbook.title} className="post-image" />
+          <img src={post.img} alt={post.textbook.title} className="post-image" />
         </div>
       )}
       <div className="post-details">
         <p>Author: {post.textbook.author}</p>
         <p>ISBN: {post.textbook.isbn}</p>
-        <p>Price: {post.price}</p>
+        <p>Price: ${post.price}</p>
         <p>Condition: {post.condition}</p>
         <p>Posted by: {post.user.email}</p>
       </div>

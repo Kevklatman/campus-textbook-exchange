@@ -1,4 +1,3 @@
-// src/components/PostList.js
 import React, { useContext } from "react";
 import { Link } from "react-router-dom";
 import { UserContext } from "../contexts/UserContext";
@@ -44,10 +43,10 @@ function PostList({ posts, onEditPost, showEditButton, onAddToWatchlist, onRemov
                 <p className="posted-by">Posted by: {post.user.email}</p>
               </div>
               <h3 className="post-title">{post.textbook.title}</h3>
-              {post.textbook.image_url && (
+              {post.img && (
                 <div className="post-image-container">
                   <img
-                    src={post.textbook.image_url}
+                    src={post.img}
                     alt={post.textbook.title}
                     className="post-image"
                   />
@@ -56,9 +55,8 @@ function PostList({ posts, onEditPost, showEditButton, onAddToWatchlist, onRemov
               <div className="post-details">
                 <p>Author: {post.textbook.author}</p>
                 <p>ISBN: {post.textbook.isbn}</p>
-                <p>Price: {post.price}</p>
+                <p>Price: ${post.price}</p>
                 <p>Condition: {post.condition}</p>
-                <p>{post.image}</p>
               </div>
               {post.id && (
                 <Link to={`/posts/${post.id}`} className="view-details-link">
