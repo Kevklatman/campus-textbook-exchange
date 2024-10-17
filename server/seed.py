@@ -31,8 +31,8 @@ def seed_textbooks(fake, num_textbooks=10):
             author=fake.name(),
             title=fake.sentence(nb_words=4),
             subject=fake.word(),
-            isbn=fake.unique.random_int(min=1000000000000, max=9999999999999),
-            img=fake.image_url()
+            isbn=fake.unique.random_int(min=1000000000000, max=9999999999999)
+            # Removed img field
         )
         textbooks.append(textbook)
         db.session.add(textbook)
@@ -47,7 +47,8 @@ def seed_posts(fake, users, textbooks, num_posts=20):
             user_id=rc(users).id,
             price=randint(10, 100),
             condition=rc(['New', 'Like New', 'Good', 'Fair']),
-            created_at=fake.date_time_this_year()
+            created_at=fake.date_time_this_year(),
+            img=fake.image_url()  # Added img field here
         )
         posts.append(post)
         db.session.add(post)
@@ -59,7 +60,7 @@ def seed_comments(fake, users, posts, num_comments=30):
         comment = Comment(
             user_id=rc(users).id,
             post_id=rc(posts).id,
-            text=fake.paragraph(nb_sentences=3),  # Generate comment text
+            text=fake.paragraph(nb_sentences=3),
             created_at=fake.date_time_this_year()
         )
         db.session.add(comment)
@@ -81,16 +82,16 @@ if __name__ == '__main__':
     fake = Faker()
     with app.app_context():
         print("Starting seed...")
-
+        
         # Clear existing data
         db.drop_all()
         db.create_all()
-
+        
         # Seed data
         users = seed_users(fake)
         textbooks = seed_textbooks(fake)
         posts = seed_posts(fake, users, textbooks)
         seed_comments(fake, users, posts)
         seed_watchlists(users, posts)
-
+        
         print("Seeding complete!")

@@ -49,31 +49,12 @@ class PostResource(Resource):
                     'id': textbook.id,
                     'title': textbook.title,
                     'author': textbook.author,
-                    'image_url': textbook.img,
                     'isbn': textbook.isbn
                 }
+                post_data['image_url'] = post.img  # Use post's image instead of textbook's
                 post_data['comments'] = [comment.to_dict() for comment in post.comments]
                 posts_data.append(post_data)
             return posts_data, 200
-        else:
-            post = Post.query.get(post_id)
-            if post is None:
-                return {"message": "Post not found"}, 404
-            user = post.user
-            textbook = post.textbook
-            post_data = post.to_dict()
-            post_data['user'] = {
-                'id': user.id,
-                'email': user.email
-            }
-            post_data['textbook'] = {
-                'id': textbook.id,
-                'title': textbook.title,
-                'author': textbook.author,
-                'image_url': textbook.img
-            }
-            post_data['comments'] = [comment.to_dict() for comment in post.comments]
-            return post_data, 200
 
     def post(self):
         data = request.form
@@ -85,8 +66,8 @@ class PostResource(Resource):
         price = data.get('price')
         condition = data.get('condition')
 
-        if not user_id or not isbn:
-            return {"message": "User ID and ISBN are required"}, 400
+        if not user_id or not isbn or not price or not condition:
+            return {"message": "User ID, ISBN, price, and condition are required"}, 400
 
         try:
             isbn = int(isbn)
@@ -94,30 +75,42 @@ class PostResource(Resource):
         except ValueError as e:
             return {"message": str(e)}, 400
 
+        user = User.query.get(user_id)
+        if not user:
+            return {"message": "User not found"}, 404
+
         textbook = Textbook.query.filter_by(isbn=isbn).first()
         if not textbook:
-            # If the textbook doesn't exist, create a new textbook
             textbook_data = {
                 'isbn': isbn,
                 'title': data.get('title', ''),
                 'author': data.get('author', '')
             }
+            textbook = Textbook(**textbook_data)
+            db.session.add(textbook)
+
+        try:
+            post = Post(user_id=user_id, textbook=textbook, price=price, condition=condition)
+            
             if 'image' in request.files:
                 image_file = request.files['image']
                 try:
                     filename = images.save(image_file)
-                    textbook_data['img'] = images.url(filename)
+                    post.img = images.url(filename)
                 except UploadNotAllowed:
                     return {"message": "Invalid image file"}, 400
-            textbook = Textbook(**textbook_data)
-            db.session.add(textbook)
 
-        post = Post(user_id=user_id, textbook=textbook, price=price, condition=condition)
+            db.session.add(post)
+            db.session.commit()
 
-        db.session.add(post)
-        db.session.commit()
+            post_data = post.to_dict()
+            post_data['textbook'] = textbook.to_dict()
+            post_data['user'] = user.to_dict()
 
-        return post.to_dict(), 201
+            return post_data, 201
+        except Exception as e:
+            db.session.rollback()
+            return {"message": "Error creating post", "error": str(e)}, 500
 
     def put(self, post_id):
         post = Post.query.get(post_id)
@@ -193,19 +186,15 @@ class TextbookResource(Resource):
             return existing_textbook.to_dict(), 200
 
         textbook = Textbook(author=author, title=title, isbn=isbn)
-
-        if 'image' in request.files:
-            image_file = request.files['image']
-            try:
-                filename = images.save(image_file)
-                textbook.img = images.url(filename)
-            except UploadNotAllowed:
-                return {"message": "Invalid image file"}, 400
+        
+        # Removed image handling from TextbookResource
 
         db.session.add(textbook)
         db.session.commit()
 
         return textbook.to_dict(), 201
+
+    # ... (rest of the TextbookResource remains the same)
 
     def delete(self, textbook_id):
         textbook = Textbook.query.get(textbook_id)
@@ -277,6 +266,7 @@ class WatchlistResource(Resource):
         watchlist_items = Watchlist.query.filter_by(user_id=user_id).all()
         watchlist_data = []
 
+
         for item in watchlist_items:
             post = Post.query.get(item.post_id)
             if post:
@@ -291,8 +281,8 @@ class WatchlistResource(Resource):
                     'id': textbook.id,
                     'title': textbook.title,
                     'author': textbook.author,
-                    'image_url': textbook.img
                 }
+                post_data['image_url'] = post.img  # Use post's image instead of textbook's
                 post_data['comments'] = [comment.to_dict() for comment in post.comments]
                 watchlist_data.append(post_data)
 

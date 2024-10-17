@@ -56,7 +56,6 @@ class Textbook(db.Model, SerializerMixin):
     title = db.Column(String)
     subject = db.Column(String)
     isbn = db.Column(BigInteger, nullable=False)
-    img = db.Column(String)
 
     posts = relationship('Post', back_populates='textbook', cascade="all, delete-orphan")
     watchlists = relationship('Watchlist', back_populates='textbook', cascade="all, delete-orphan")
@@ -79,13 +78,6 @@ class Textbook(db.Model, SerializerMixin):
         if not (1000000000000 <= isbn < 10000000000000):
             raise ValueError("ISBN must be a 13-digit integer.")
 
-    @validates('img')
-    def validate_image_url(self, key, url):
-        if not url:
-            return url
-        if not url.startswith('http://') and not url.startswith('https://'):
-            raise ValueError("Invalid image URL format.")
-        return url
 
 class Comment(db.Model, SerializerMixin):
     __tablename__ = "comments"
@@ -115,6 +107,8 @@ class Post(db.Model, SerializerMixin):
     price = db.Column(Integer)
     condition = db.Column(String)
     created_at = db.Column(DateTime, server_default=func.now())
+    img = db.Column(String)  # Added img column
+
 
     user = relationship('User', back_populates='posts')
     textbook = relationship('Textbook', back_populates='posts')
@@ -123,6 +117,13 @@ class Post(db.Model, SerializerMixin):
 
     def __repr__(self):
         return f"<Post(id={self.id}, textbook_id={self.textbook_id}, user_id={self.user_id}, price={self.price})>"
+    @validates('img')
+    def validate_image_url(self, key, url):
+        if not url:
+            return url
+        if not url.startswith('http://') and not url.startswith('https://'):
+            raise ValueError("Invalid image URL format.")
+        return url
 
 class Watchlist(db.Model, SerializerMixin):
     __tablename__ = "watchlists"
