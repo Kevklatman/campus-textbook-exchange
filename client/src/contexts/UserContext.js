@@ -1,4 +1,3 @@
-// src/contexts/UserContext.js
 import React, { createContext, useState, useEffect } from "react";
 
 export const UserContext = createContext();
@@ -6,6 +5,7 @@ export const UserContext = createContext();
 export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [watchlistPosts, setWatchlistPosts] = useState([]);
 
   useEffect(() => {
     // Check if user is logged in
@@ -19,33 +19,97 @@ export function UserProvider({ children }) {
       })
       .then((userData) => {
         setUser(userData);
+        fetchWatchlist(userData.id);
         setLoading(false);
       })
       .catch((error) => {
         console.error("Authentication error:", error);
         setUser(null);
+        setWatchlistPosts([]);
         setLoading(false);
       });
   }, []);
 
-  const login = (userData) => {
-    setUser(userData);
+  const fetchWatchlist = async (userId) => {
+    try {
+      const response = await fetch(`/users/${userId}/watchlist`);
+      if (response.ok) {
+        const watchlistData = await response.json();
+        setWatchlistPosts(watchlistData || []);
+      }
+    } catch (error) {
+      console.error("Error fetching watchlist:", error);
+      setWatchlistPosts([]);
+    }
   };
 
-  const logout = () => {
-    fetch("/logout", { method: "POST" })
-      .then((res) => {
-        if (res.ok) {
-          setUser(null);
-          // Redirect the user to the login page or any other appropriate page
-          window.location.href = '/login';
-        } else {
-          throw new Error('Logout failed');
-        }
-      })
-      .catch((error) => {
-        console.error("Logout error:", error);
+  const login = async (credentials) => {
+    try {
+      const response = await fetch("/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(credentials),
       });
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        fetchWatchlist(userData.id);
+      } else {
+        throw new Error("Login failed");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      const response = await fetch("/logout", { method: "POST" });
+      if (response.ok) {
+        setUser(null);
+        setWatchlistPosts([]);
+        // Redirect the user to the login page or any other appropriate page
+        window.location.href = '/login';
+      } else {
+        throw new Error('Logout failed');
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  const addToWatchlist = async (postId, textbookId) => {
+    if (!user) return;
+    try {
+      const response = await fetch(`/users/${user.id}/watchlist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ post_id: postId, textbook_id: textbookId }),
+      });
+
+      if (response.ok) {
+        const updatedWatchlist = await response.json();
+        setWatchlistPosts(updatedWatchlist);
+      }
+    } catch (error) {
+      console.error('Error adding to watchlist:', error);
+    }
+  };
+
+  const removeFromWatchlist = async (postId) => {
+    if (!user) return;
+    try {
+      await fetch(`/users/${user.id}/watchlist/${postId}`, {
+        method: 'DELETE',
+      });
+      setWatchlistPosts((prevWatchlist) => prevWatchlist.filter((post) => post.id !== postId));
+    } catch (error) {
+      console.error('Error removing from watchlist:', error);
+    }
   };
 
   if (loading) {
@@ -53,7 +117,15 @@ export function UserProvider({ children }) {
   }
 
   return (
-    <UserContext.Provider value={{ user, setUser, login, logout }}>
+    <UserContext.Provider value={{ 
+      user, 
+      setUser, 
+      login, 
+      logout, 
+      watchlistPosts: watchlistPosts || [], 
+      addToWatchlist, 
+      removeFromWatchlist 
+    }}>
       {children}
     </UserContext.Provider>
   );

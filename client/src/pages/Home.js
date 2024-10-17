@@ -5,8 +5,8 @@ import { Link } from 'react-router-dom';
 import PostList from '../components/PostList';
 
 function Home() {
-  const { user } = useContext(UserContext);
-  const { posts, setWatchlistPosts } = useContext(PostContext);
+  const { user, addToWatchlist } = useContext(UserContext);
+  const { posts } = useContext(PostContext);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPosts, setFilteredPosts] = useState(posts);
 
@@ -31,30 +31,8 @@ function Home() {
   }, [searchTerm, posts]);
 
   const handleAddToWatchlist = async (postId, textbookId) => {
-    try {
-      // Make an API call to add the post to the user's watchlist
-      const response = await fetch(`/users/${user.id}/watchlist`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ post_id: postId, textbook_id: textbookId }),
-      });
-  
-      if (response.ok) {
-        // Fetch the updated watchlist posts
-        const updatedWatchlistResponse = await fetch(`/users/${user.id}/watchlist`);
-        if (updatedWatchlistResponse.ok) {
-          const updatedWatchlist = await updatedWatchlistResponse.json();
-          setWatchlistPosts(updatedWatchlist);
-        } else {
-          console.error('Error fetching updated watchlist');
-        }
-      } else {
-        console.error('Error adding post to watchlist');
-      }
-    } catch (error) {
-      console.error('Error adding post to watchlist:', error);
+    if (user) {
+      await addToWatchlist(postId, textbookId);
     }
   };
 
