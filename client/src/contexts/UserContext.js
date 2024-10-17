@@ -19,7 +19,9 @@ export function UserProvider({ children }) {
       })
       .then((userData) => {
         setUser(userData);
-        fetchWatchlist(userData.id);
+        if (userData) {
+          fetchWatchlist(userData.id);
+        }
         setLoading(false);
       })
       .catch((error) => {
@@ -43,41 +45,28 @@ export function UserProvider({ children }) {
     }
   };
 
-  const login = async (credentials) => {
-    try {
-      const response = await fetch("/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(credentials),
-      });
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-        fetchWatchlist(userData.id);
-      } else {
-        throw new Error("Login failed");
-      }
-    } catch (error) {
-      console.error("Login error:", error);
+  const login = (userData) => {
+    setUser(userData);
+    if (userData) {
+      fetchWatchlist(userData.id);
     }
   };
 
-  const logout = async () => {
-    try {
-      const response = await fetch("/logout", { method: "POST" });
-      if (response.ok) {
-        setUser(null);
-        setWatchlistPosts([]);
-        // Redirect the user to the login page or any other appropriate page
-        window.location.href = '/login';
-      } else {
-        throw new Error('Logout failed');
-      }
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
+  const logout = () => {
+    fetch("/logout", { method: "POST" })
+      .then((res) => {
+        if (res.ok) {
+          setUser(null);
+          setWatchlistPosts([]);
+          // Redirect the user to the login page or any other appropriate page
+          window.location.href = '/login';
+        } else {
+          throw new Error('Logout failed');
+        }
+      })
+      .catch((error) => {
+        console.error("Logout error:", error);
+      });
   };
 
   const addToWatchlist = async (postId, textbookId) => {
@@ -117,14 +106,14 @@ export function UserProvider({ children }) {
   }
 
   return (
-    <UserContext.Provider value={{ 
-      user, 
-      setUser, 
-      login, 
-      logout, 
-      watchlistPosts: watchlistPosts || [], 
-      addToWatchlist, 
-      removeFromWatchlist 
+    <UserContext.Provider value={{
+      user,
+      setUser,
+      login,
+      logout,
+      watchlistPosts,
+      addToWatchlist,
+      removeFromWatchlist
     }}>
       {children}
     </UserContext.Provider>
