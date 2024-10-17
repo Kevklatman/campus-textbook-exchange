@@ -46,13 +46,6 @@ class PostResource(Resource):
                 post_data = post.to_dict()
                 post_data['user'] = post.user.to_dict()
                 post_data['textbook'] = post.textbook.to_dict()
-                
-                # Generate full Cloudinary URL
-                if post.img:
-                    post_data['image_url'], _ = cloudinary_url(post.img)
-                else:
-                    post_data['image_url'] = None
-                
                 post_data['comments'] = [comment.to_dict() for comment in post.comments]
                 posts_data.append(post_data)
             
@@ -65,21 +58,16 @@ class PostResource(Resource):
             post_data = post.to_dict()
             post_data['user'] = post.user.to_dict()
             post_data['textbook'] = post.textbook.to_dict()
-            
-            # Generate full Cloudinary URL
-            if post.img:
-                post_data['image_url'], _ = cloudinary_url(post.img)
-            else:
-                post_data['image_url'] = None
-            
             post_data['comments'] = [comment.to_dict() for comment in post.comments]
             
             return post_data, 200
+        
 
     def post(self):
         data = request.form
-        if not data:
-            return {"message": "No input data provided"}, 400
+        files = request.files
+        print("Received data:", data)
+        print("Received files:", files)
 
         user_id = data.get('user_id')
         isbn = data.get('isbn')
@@ -111,24 +99,27 @@ class PostResource(Resource):
 
         try:
             post = Post(user_id=user_id, textbook=textbook, price=price, condition=condition)
-            
-            if 'image' in request.files:
-                image_file = request.files['image']
+
+            if 'image' in files:
+                image_file = files['image']
                 if image_file:
-                    # Upload to Cloudinary
+                    print("Uploading image to Cloudinary...")
                     upload_result = upload(image_file)
+                    print("Cloudinary upload result:", upload_result)
                     post.img = upload_result['public_id']
-            
+
             db.session.add(post)
             db.session.commit()
 
             post_data = post.to_dict()
             post_data['textbook'] = textbook.to_dict()
             post_data['user'] = user.to_dict()
-            post_data['image_url'] = post.image_url  # Use the new image_url property
+            post_data['image_url'] = post.image_url
 
+            print("Returning post data:", post_data)
             return post_data, 201
         except Exception as e:
+            print("Error creating post:", str(e))
             db.session.rollback()
             return {"message": "Error creating post", "error": str(e)}, 500
 

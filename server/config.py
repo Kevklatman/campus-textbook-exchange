@@ -63,3 +63,5 @@ cloudinary.config(
     api_key = "247538451127763",
     api_secret = "oP9Qkj-5_o8fk8SGx0A8pybDtGs"
 )
+
+CLOUDINARY_UPLOAD_PRESET = "unsigned"

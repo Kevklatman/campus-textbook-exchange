@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import { Redirect } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
 
@@ -8,42 +8,20 @@ function CreatePost({ onNewPostCreated }) {
   const [isbn, setIsbn] = useState('');
   const [price, setPrice] = useState('');
   const [condition, setCondition] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [errors, setErrors] = useState({});
   const { user } = useContext(UserContext);
-
-  useEffect(() => {
-    // Load the Cloudinary widget script
-    const script = document.createElement('script');
-    script.src = 'https://widget.cloudinary.com/v2.0/global/all.js';
-    script.async = true;
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
 
   if (!user) {
     return <Redirect to="/login" />;
   }
 
-  const handleImageUpload = () => {
-    if (window.cloudinary) {
-      window.cloudinary.createUploadWidget(
-        {
-          cloudName: 'duhjluee1', // Replace with your cloud name
-          uploadPreset: 'unsigned', // Replace with your upload preset
-        },
-        (error, result) => {
-          if (!error && result && result.event === "success") {
-            console.log('Done! Here is the image info: ', result.info);
-            setImageUrl(result.info.secure_url);
-          }
-        }
-      ).open();
-    } else {
-      console.error('Cloudinary widget is not loaded yet');
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
@@ -72,7 +50,9 @@ function CreatePost({ onNewPostCreated }) {
     formData.append('price', price);
     formData.append('condition', condition);
     formData.append('user_id', user.id);
-    formData.append('image', imageUrl);
+    if (imageFile) {
+      formData.append('image', imageFile);
+    }
 
     try {
       const response = await fetch('/posts', {
@@ -87,7 +67,8 @@ function CreatePost({ onNewPostCreated }) {
         setIsbn('');
         setPrice('');
         setCondition('');
-        setImageUrl('');
+        setImageFile(null);
+        setImagePreview('');
         setErrors({});
 
         // Call the onNewPostCreated function passed from the Home component
@@ -161,10 +142,14 @@ function CreatePost({ onNewPostCreated }) {
           />
         </div>
         <div>
-          <button type="button" onClick={handleImageUpload}>
-            Upload Image
-          </button>
-          {imageUrl && <img src={imageUrl} alt="Uploaded" style={{ maxWidth: '200px' }} />}
+          <label htmlFor="image">Image:</label>
+          <input
+            type="file"
+            id="image"
+            onChange={handleImageUpload}
+            accept="image/*"
+          />
+          {imagePreview && <img src={imagePreview} alt="Preview" style={{ maxWidth: '200px' }} />}
         </div>
         <button type="submit">Create Post</button>
       </form>

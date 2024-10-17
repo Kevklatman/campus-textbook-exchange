@@ -5,6 +5,7 @@ from faker import Faker
 from app import app
 from models import db, User, Textbook, Comment, Post, Watchlist
 from cloudinary.uploader import upload
+from config import CLOUDINARY_UPLOAD_PRESET
 
 fake = Faker()
 
@@ -49,8 +50,12 @@ def seed_posts(users, textbooks, num_posts=20):
     posts = []
     for i in range(num_posts):
         try:
-            # Upload a random image to Cloudinary
-            upload_result = upload(fake.image_url())
+            # Generate a fake image URL
+            fake_image_url = fake.image_url()
+            
+            # Upload the image to Cloudinary (unsigned upload)
+            upload_result = upload(fake_image_url, upload_preset=CLOUDINARY_UPLOAD_PRESET)
+            
             post = Post(
                 textbook_id=rc(textbooks).id,
                 user_id=rc(users).id,
