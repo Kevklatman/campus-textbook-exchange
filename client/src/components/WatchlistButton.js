@@ -5,10 +5,12 @@ import '../index.css';
 function WatchlistButton({ postId, textbookId }) {
   const { user, watchlistPosts, addToWatchlist, removeFromWatchlist } = useContext(UserContext);
 
-  const isInWatchlist = watchlistPosts.some(post => post.id === postId);
+  const isInWatchlist = (postId) => {
+    return Array.isArray(watchlistPosts) && watchlistPosts.some((post) => post.id === postId);
+  };
 
   const handleWatchlistClick = () => {
-    if (isInWatchlist) {
+    if (isInWatchlist(postId)) {
       removeFromWatchlist(postId);
     } else {
       addToWatchlist(postId, textbookId);
@@ -22,7 +24,7 @@ function WatchlistButton({ postId, textbookId }) {
       className="watchlist-button"
       onClick={handleWatchlistClick}
     >
-      {isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
+      {isInWatchlist(postId) ? 'Remove from Watchlist' : 'Add to Watchlist'}
     </button>
   );
 }

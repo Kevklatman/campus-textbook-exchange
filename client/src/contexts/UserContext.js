@@ -4,8 +4,8 @@ export const UserContext = createContext();
 
 export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [watchlistPosts, setWatchlistPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check if user is logged in
@@ -19,9 +19,7 @@ export function UserProvider({ children }) {
       })
       .then((userData) => {
         setUser(userData);
-        if (userData) {
-          fetchWatchlist(userData.id);
-        }
+        fetchWatchlist(userData.id);
         setLoading(false);
       })
       .catch((error) => {
@@ -47,9 +45,7 @@ export function UserProvider({ children }) {
 
   const login = (userData) => {
     setUser(userData);
-    if (userData) {
-      fetchWatchlist(userData.id);
-    }
+    fetchWatchlist(userData.id);
   };
 
   const logout = () => {
