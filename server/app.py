@@ -155,6 +155,22 @@ class PostResource(Resource):
                     send_email(subject, recipients, body)
 
         return make_response(post.to_dict(), 200)
+    
+    def delete(self, post_id):
+            post = Post.query.get(post_id)
+            if not post:
+                return {"message": "Post not found"}, 404
+
+            if post.user_id != current_user.id:
+                return {"message": "Unauthorized"}, 401
+
+            try:
+                db.session.delete(post)
+                db.session.commit()
+                return {"message": "Post deleted successfully"}, 200
+            except Exception as e:
+                db.session.rollback()
+                return {"message": "Error deleting post", "error": str(e)}, 500
 
 class TextbookResource(Resource):
     def get(self, textbook_id=None):
