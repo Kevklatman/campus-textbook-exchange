@@ -1,8 +1,8 @@
-// src/components/EditPostForm.js
 import React, { useState } from 'react';
 
 function EditPostForm({ post, onUpdatePost, onCancel }) {
   const [editedPost, setEditedPost] = useState(post);
+  const [newImage, setNewImage] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -22,9 +22,22 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
     }
   };
 
+  const handleImageChange = (e) => {
+    setNewImage(e.target.files[0]);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onUpdatePost(editedPost);
+    const formData = new FormData();
+    formData.append('price', editedPost.price);
+    formData.append('condition', editedPost.condition);
+    formData.append('title', editedPost.textbook.title);
+    formData.append('author', editedPost.textbook.author);
+    formData.append('isbn', editedPost.textbook.isbn);
+    if (newImage) {
+      formData.append('image', newImage);
+    }
+    onUpdatePost(formData);
   };
 
   return (
@@ -79,6 +92,21 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
           onChange={handleChange}
         />
       </div>
+      <div>
+        <label htmlFor="image">Image:</label>
+        <input
+          type="file"
+          id="image"
+          name="image"
+          onChange={handleImageChange}
+        />
+      </div>
+      {editedPost.img && (
+        <div>
+          <p>Current Image:</p>
+          <img src={editedPost.img} alt="Current" style={{ maxWidth: '200px' }} />
+        </div>
+      )}
       <button type="submit">Update</button>
       <button type="button" onClick={onCancel}>
         Cancel
