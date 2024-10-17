@@ -1,8 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 function EditPostForm({ post, onUpdatePost, onCancel }) {
   const [editedPost, setEditedPost] = useState(post);
   const [newImage, setNewImage] = useState(null);
+
+  useEffect(() => {
+    // Load the Cloudinary widget script
+    const script = document.createElement('script');
+    script.src = 'https://widget.cloudinary.com/v2.0/global/all.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -22,8 +34,23 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
     }
   };
 
-  const handleImageChange = (e) => {
-    setNewImage(e.target.files[0]);
+  const handleImageUpload = () => {
+    if (window.cloudinary) {
+      window.cloudinary.createUploadWidget(
+        {
+          cloudName: 'duhjluee1', // Replace with your cloud name
+          uploadPreset: 'unsigned', // Replace with your upload preset
+        },
+        (error, result) => {
+          if (!error && result && result.event === "success") {
+            console.log('Done! Here is the image info: ', result.info);
+            setNewImage(result.info.secure_url);
+          }
+        }
+      ).open();
+    } else {
+      console.error('Cloudinary widget is not loaded yet');
+    }
   };
 
   const handleSubmit = (e) => {
@@ -93,20 +120,17 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
         />
       </div>
       <div>
-        <label htmlFor="image">Image:</label>
-        <input
-          type="file"
-          id="image"
-          name="image"
-          onChange={handleImageChange}
-        />
+        <button type="button" onClick={handleImageUpload}>
+          {newImage ? 'Change Image' : 'Upload New Image'}
+        </button>
+        {(newImage || editedPost.image_url) && (
+          <img 
+            src={newImage || editedPost.image_url} 
+            alt="Post" 
+            style={{ maxWidth: '200px' }} 
+          />
+        )}
       </div>
-      {editedPost.img && (
-        <div>
-          <p>Current Image:</p>
-          <img src={editedPost.img} alt="Current" style={{ maxWidth: '200px' }} />
-        </div>
-      )}
       <button type="submit">Update</button>
       <button type="button" onClick={onCancel}>
         Cancel

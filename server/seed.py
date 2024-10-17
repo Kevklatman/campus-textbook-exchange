@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
-# Standard library imports
 from random import randint, choice as rc
-
-# Remote library imports
 from faker import Faker
-
-# Local imports
 from app import app
 from models import db, User, Textbook, Comment, Post, Watchlist
+from cloudinary.uploader import upload
 
-def seed_users(fake, num_users=10):
+fake = Faker()
+
+def seed_users(num_users=10):
     users = []
     for i in range(num_users):
         try:
@@ -28,7 +26,7 @@ def seed_users(fake, num_users=10):
             db.session.rollback()
     return users
 
-def seed_textbooks(fake, num_textbooks=10):
+def seed_textbooks(num_textbooks=10):
     textbooks = []
     for i in range(num_textbooks):
         try:
@@ -47,17 +45,19 @@ def seed_textbooks(fake, num_textbooks=10):
             db.session.rollback()
     return textbooks
 
-def seed_posts(fake, users, textbooks, num_posts=20):
+def seed_posts(users, textbooks, num_posts=20):
     posts = []
     for i in range(num_posts):
         try:
+            # Upload a random image to Cloudinary
+            upload_result = upload(fake.image_url())
             post = Post(
                 textbook_id=rc(textbooks).id,
                 user_id=rc(users).id,
                 price=randint(10, 100),
                 condition=rc(['New', 'Like New', 'Good', 'Fair']),
                 created_at=fake.date_time_this_year(),
-                img=fake.image_url()
+                img=upload_result['public_id']  # Store Cloudinary public_id
             )
             posts.append(post)
             db.session.add(post)
@@ -68,7 +68,7 @@ def seed_posts(fake, users, textbooks, num_posts=20):
             db.session.rollback()
     return posts
 
-def seed_comments(fake, users, posts, num_comments=30):
+def seed_comments(users, posts, num_comments=30):
     for i in range(num_comments):
         try:
             comment = Comment(
@@ -102,31 +102,28 @@ def seed_watchlists(users, posts, num_watchlists=15):
             db.session.rollback()
 
 if __name__ == '__main__':
-    fake = Faker()
     with app.app_context():
         print("Starting seed...")
         
-        # Clear existing data
         db.drop_all()
         db.create_all()
         
-        # Seed data
-        users = seed_users(fake)
+        users = seed_users()
         if not users:
             print("Failed to create any users. Exiting.")
             exit(1)
         
-        textbooks = seed_textbooks(fake)
+        textbooks = seed_textbooks()
         if not textbooks:
             print("Failed to create any textbooks. Exiting.")
             exit(1)
         
-        posts = seed_posts(fake, users, textbooks)
+        posts = seed_posts(users, textbooks)
         if not posts:
             print("Failed to create any posts. Exiting.")
             exit(1)
         
-        seed_comments(fake, users, posts)
+        seed_comments(users, posts)
         seed_watchlists(users, posts)
         
         print("Seeding complete!")

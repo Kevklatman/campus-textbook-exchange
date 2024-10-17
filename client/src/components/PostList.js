@@ -43,10 +43,10 @@ function PostList({ posts, onEditPost, showEditButton, onAddToWatchlist, onRemov
                 <p className="posted-by">Posted by: {post.user.email}</p>
               </div>
               <h3 className="post-title">{post.textbook.title}</h3>
-              {post.img && (
+              {post.image_url && (
                 <div className="post-image-container">
                   <img
-                    src={post.img}
+                    src={post.image_url}
                     alt={post.textbook.title}
                     className="post-image"
                   />

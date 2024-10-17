@@ -11,6 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from flask_uploads import UploadSet, IMAGES, configure_uploads
 from flask_mail import Mail
+import cloudinary
 
 # Local imports
 
@@ -56,3 +57,9 @@ app.config['MAIL_DEFAULT_SENDER'] = ('campustextbookexchange@gmail.com')
 mail = Mail(app)
 
 app.secret_key = 'your_secret_key_here'
+
+cloudinary.config(
+    cloud_name = "duhjluee1",
+    api_key = "247538451127763",
+    api_secret = "oP9Qkj-5_o8fk8SGx0A8pybDtGs"
+)

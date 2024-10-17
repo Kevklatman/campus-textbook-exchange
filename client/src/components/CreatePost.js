@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Redirect } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
 
@@ -8,27 +8,52 @@ function CreatePost({ onNewPostCreated }) {
   const [isbn, setIsbn] = useState('');
   const [price, setPrice] = useState('');
   const [condition, setCondition] = useState('');
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [imageUrl, setImageUrl] = useState('');
   const [errors, setErrors] = useState({});
   const { user } = useContext(UserContext);
 
+  useEffect(() => {
+    // Load the Cloudinary widget script
+    const script = document.createElement('script');
+    script.src = 'https://widget.cloudinary.com/v2.0/global/all.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
   if (!user) {
-    // If the user is not logged in, redirect to the login page
     return <Redirect to="/login" />;
   }
+
+  const handleImageUpload = () => {
+    if (window.cloudinary) {
+      window.cloudinary.createUploadWidget(
+        {
+          cloudName: 'duhjluee1', // Replace with your cloud name
+          uploadPreset: 'unsigned', // Replace with your upload preset
+        },
+        (error, result) => {
+          if (!error && result && result.event === "success") {
+            console.log('Done! Here is the image info: ', result.info);
+            setImageUrl(result.info.secure_url);
+          }
+        }
+      ).open();
+    } else {
+      console.error('Cloudinary widget is not loaded yet');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Perform form validation
     const validationErrors = {};
-    if (!author) {
-      validationErrors.author = 'Author is required';
-    }
-    if (!title) {
-      validationErrors.title = 'Title is required';
-    }
+    if (!author) validationErrors.author = 'Author is required';
+    if (!title) validationErrors.title = 'Title is required';
     if (!isbn) {
       validationErrors.isbn = 'ISBN is required';
     } else if (!/^\d{13}$/.test(isbn)) {
@@ -47,9 +72,7 @@ function CreatePost({ onNewPostCreated }) {
     formData.append('price', price);
     formData.append('condition', condition);
     formData.append('user_id', user.id);
-    if (imageFile) {
-      formData.append('image', imageFile);
-    }
+    formData.append('image', imageUrl);
 
     try {
       const response = await fetch('/posts', {
@@ -64,8 +87,7 @@ function CreatePost({ onNewPostCreated }) {
         setIsbn('');
         setPrice('');
         setCondition('');
-        setImageFile(null);
-        setImagePreview(null);
+        setImageUrl('');
         setErrors({});
 
         // Call the onNewPostCreated function passed from the Home component
@@ -78,12 +100,6 @@ function CreatePost({ onNewPostCreated }) {
       console.error('Error creating post:', error);
       // Display error message to the user
     }
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
   };
 
   return (
@@ -145,16 +161,10 @@ function CreatePost({ onNewPostCreated }) {
           />
         </div>
         <div>
-          <label htmlFor="imageFile">Image:</label>
-          <input
-            type="file"
-            id="imageFile"
-            accept="image/*"
-            onChange={handleImageChange}
-          />
-          {imagePreview && (
-            <img src={imagePreview} alt="Preview" style={{ maxWidth: '200px' }} />
-          )}
+          <button type="button" onClick={handleImageUpload}>
+            Upload Image
+          </button>
+          {imageUrl && <img src={imageUrl} alt="Uploaded" style={{ maxWidth: '200px' }} />}
         </div>
         <button type="submit">Create Post</button>
       </form>

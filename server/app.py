@@ -8,6 +8,8 @@ from flask_uploads import configure_uploads, UploadNotAllowed
 import logging
 from flask_mail import Message
 import logging
+from cloudinary.uploader import upload
+from cloudinary.utils import cloudinary_url
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -29,8 +31,8 @@ def send_email(subject, recipients, body):
 @app.route('/')
 def index():
     return '<h1>Project Server</h1>'
-
 class PostResource(Resource):
+
     def get(self, post_id=None):
         if post_id is None:
             user_id = request.args.get('user_id')
@@ -41,24 +43,38 @@ class PostResource(Resource):
 
             posts_data = []
             for post in posts:
-                user = post.user
-                textbook = post.textbook
                 post_data = post.to_dict()
-                post_data['id'] = post.id
-                post_data['user'] = {
-                    'id': user.id,
-                    'email': user.email
-                }
-                post_data['textbook'] = {
-                    'id': textbook.id,
-                    'title': textbook.title,
-                    'author': textbook.author,
-                    'isbn': textbook.isbn
-                }
-                post_data['img'] = post.img  # Include the image URL directly in the post data
+                post_data['user'] = post.user.to_dict()
+                post_data['textbook'] = post.textbook.to_dict()
+                
+                # Generate full Cloudinary URL
+                if post.img:
+                    post_data['image_url'], _ = cloudinary_url(post.img)
+                else:
+                    post_data['image_url'] = None
+                
                 post_data['comments'] = [comment.to_dict() for comment in post.comments]
                 posts_data.append(post_data)
+            
             return posts_data, 200
+        else:
+            post = Post.query.get(post_id)
+            if post is None:
+                return {"message": "Post not found"}, 404
+            
+            post_data = post.to_dict()
+            post_data['user'] = post.user.to_dict()
+            post_data['textbook'] = post.textbook.to_dict()
+            
+            # Generate full Cloudinary URL
+            if post.img:
+                post_data['image_url'], _ = cloudinary_url(post.img)
+            else:
+                post_data['image_url'] = None
+            
+            post_data['comments'] = [comment.to_dict() for comment in post.comments]
+            
+            return post_data, 200
 
     def post(self):
         data = request.form
@@ -69,7 +85,6 @@ class PostResource(Resource):
         isbn = data.get('isbn')
         price = data.get('price')
         condition = data.get('condition')
-        image = data.get('image')
 
         if not user_id or not isbn or not price or not condition:
             return {"message": "User ID, ISBN, price, and condition are required"}, 400
@@ -99,19 +114,18 @@ class PostResource(Resource):
             
             if 'image' in request.files:
                 image_file = request.files['image']
-                try:
-                    filename = images.save(image_file)
-                    post.img = images.url(filename)
-                except UploadNotAllowed:
-                    return {"message": "Invalid image file"}, 400
-
+                if image_file:
+                    # Upload to Cloudinary
+                    upload_result = upload(image_file)
+                    post.img = upload_result['public_id']
+            
             db.session.add(post)
             db.session.commit()
 
             post_data = post.to_dict()
             post_data['textbook'] = textbook.to_dict()
             post_data['user'] = user.to_dict()
-            post_data['image']=image.to_dict()
+            post_data['image_url'] = post.image_url  # Use the new image_url property
 
             return post_data, 201
         except Exception as e:
@@ -126,7 +140,7 @@ class PostResource(Resource):
         if post.user_id != current_user.id:
             return {"message": "Unauthorized"}, 401
 
-        data = request.get_json()
+        data = request.form
         if not data:
             return {"message": "No input data provided"}, 400
 
@@ -135,16 +149,21 @@ class PostResource(Resource):
         post.price = data.get('price', post.price)
         post.condition = data.get('condition', post.condition)
 
-        textbook_data = data.get('textbook')
-        if textbook_data:
-            textbook = post.textbook
-            textbook.title = textbook_data.get('title', textbook.title)
-            textbook.author = textbook_data.get('author', textbook.author)
-            textbook.isbn = textbook_data.get('isbn', textbook.isbn)
+        textbook = post.textbook
+        textbook.title = data.get('title', textbook.title)
+        textbook.author = data.get('author', textbook.author)
+        textbook.isbn = data.get('isbn', textbook.isbn)
+
+        if 'image' in request.files:
+            image_file = request.files['image']
+            if image_file:
+                # Upload to Cloudinary
+                upload_result = upload(image_file)
+                post.img = upload_result['public_id']
 
         db.session.commit()
 
-        if post.price < original_price:
+        if float(post.price) < float(original_price):
             watchlist_items = Watchlist.query.filter_by(post_id=post_id).all()
             for item in watchlist_items:
                 user = User.query.get(item.user_id)
@@ -154,23 +173,23 @@ class PostResource(Resource):
                     recipients = [user.email]
                     send_email(subject, recipients, body)
 
-        return make_response(post.to_dict(), 200)
+        return post.to_dict(), 200
     
     def delete(self, post_id):
-            post = Post.query.get(post_id)
-            if not post:
-                return {"message": "Post not found"}, 404
+        post = Post.query.get(post_id)
+        if not post:
+            return {"message": "Post not found"}, 404
 
-            if post.user_id != current_user.id:
-                return {"message": "Unauthorized"}, 401
+        if post.user_id != current_user.id:
+            return {"message": "Unauthorized"}, 401
 
-            try:
-                db.session.delete(post)
-                db.session.commit()
-                return {"message": "Post deleted successfully"}, 200
-            except Exception as e:
-                db.session.rollback()
-                return {"message": "Error deleting post", "error": str(e)}, 500
+        try:
+            db.session.delete(post)
+            db.session.commit()
+            return {"message": "Post deleted successfully"}, 200
+        except Exception as e:
+            db.session.rollback()
+            return {"message": "Error deleting post", "error": str(e)}, 500
 
 class TextbookResource(Resource):
     def get(self, textbook_id=None):
@@ -288,24 +307,18 @@ class WatchlistResource(Resource):
         watchlist_items = Watchlist.query.filter_by(user_id=user_id).all()
         watchlist_data = []
 
-
         for item in watchlist_items:
             post = Post.query.get(item.post_id)
             if post:
                 textbook = post.textbook
-                user = post.user
                 post_data = post.to_dict()
-                post_data['user'] = {
-                    'id': user.id,
-                    'email': user.email
-                }
                 post_data['textbook'] = {
                     'id': textbook.id,
                     'title': textbook.title,
                     'author': textbook.author,
+                    'isbn': textbook.isbn
                 }
-                post_data['image_url'] = post.img  # Use post's image instead of textbook's
-                post_data['comments'] = [comment.to_dict() for comment in post.comments]
+                post_data['image_url'] = post.image_url  # Make sure this is included
                 watchlist_data.append(post_data)
 
         return watchlist_data, 200

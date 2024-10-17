@@ -19,9 +19,9 @@ const Watchlist = () => {
       {watchlistPosts.map((item) => (
         <div key={item.id} className="watchlist-item">
           <h3>{item.textbook?.title}</h3>
-          {item.img && (
+          {item.image_url && (
             <div className="watchlist-image-container">
-              <img src={item.img} alt={item.textbook?.title} className="watchlist-image" />
+              <img src={item.image_url} alt={item.textbook?.title} className="watchlist-image" />
             </div>
           )}
           <div className="watchlist-details">

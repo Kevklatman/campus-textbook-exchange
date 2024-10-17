@@ -6,6 +6,8 @@ from flask_login import UserMixin
 from flask_bcrypt import generate_password_hash, check_password_hash
 from config import db
 import re
+from cloudinary.utils import cloudinary_url
+
 
 class User(db.Model, SerializerMixin, UserMixin):
     __tablename__ = "users"
@@ -112,7 +114,7 @@ class Comment(db.Model, SerializerMixin):
 class Post(db.Model, SerializerMixin):
     __tablename__ = "posts"
 
-    serialize_only = ('id', 'textbook_id', 'user_id', 'price', 'condition', 'created_at', 'img')
+    serialize_only = ('id', 'textbook_id', 'user_id', 'price', 'condition', 'created_at', 'img', 'image_url')
 
     id = db.Column(Integer, primary_key=True)
     textbook_id = db.Column(Integer, ForeignKey('textbooks.id', ondelete='CASCADE'), nullable=False)
@@ -120,7 +122,7 @@ class Post(db.Model, SerializerMixin):
     price = db.Column(Integer)
     condition = db.Column(String)
     created_at = db.Column(DateTime, server_default=func.now())
-    img = db.Column(String)
+    img = db.Column(db.String, nullable=True)  # This now stores the Cloudinary public ID
 
     user = relationship('User', back_populates='posts')
     textbook = relationship('Textbook', back_populates='posts')
@@ -130,11 +132,21 @@ class Post(db.Model, SerializerMixin):
     def __repr__(self):
         return f"<Post(id={self.id}, textbook_id={self.textbook_id}, user_id={self.user_id}, price={self.price})>"
 
-    @validates('img')
-    def validate_image_url(self, key, url):
-        if url and not (url.startswith('http://') or url.startswith('https://')):
-            raise ValueError("Invalid image URL format.")
-        return url
+    def get_image_url(self):
+        if self.img:
+            return cloudinary_url(self.img)[0]  # cloudinary_url returns a tuple (url, options)
+        return None
+
+    @property
+    def image_url(self):
+        return self.get_image_url()
+
+    def to_dict(self):
+        dict_repr = super().to_dict()
+        dict_repr['image_url'] = self.image_url
+        return dict_repr
+    
+    
 
 class Watchlist(db.Model, SerializerMixin):
     __tablename__ = "watchlists"
