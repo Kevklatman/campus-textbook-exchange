@@ -21,24 +21,27 @@ function MyPosts() {
     setEditingPost(post);
   };
 
-  const handleUpdatePost = async (updatedPost) => {
+  const handleUpdatePost = async (formData) => {
     try {
-      const response = await fetch(`/posts/${updatedPost.id}`, {
+      const postId = editingPost.id;
+      console.log("Sending update for post ID:", postId);
+  
+      const response = await fetch(`/posts/${postId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedPost),
+        body: formData,
       });
-
-      if (response.ok) {
-        updatePost(updatedPost);
-        setEditingPost(null);
-      } else {
-        console.error('Error updating post');
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
+  
+      const updatedPost = await response.json();
+      console.log("Received updated post:", updatedPost);
+      updatePost(updatedPost);
+      setEditingPost(null);
     } catch (error) {
-      console.error('Error updating post:', error);
+      console.error('Error updating post:', error.message);
     }
   };
 
