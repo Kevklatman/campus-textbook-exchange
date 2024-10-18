@@ -119,71 +119,71 @@ class PostResource(Resource):
             db.session.rollback()
             return {"message": "Error creating post", "error": str(e)}, 500
 
-def put(self, post_id):
-    print(f"Attempting to update post with id: {post_id}")
-    post = Post.query.get(post_id)
-    if not post:
-        print(f"Post with id {post_id} not found")
-        return {"message": "Post not found"}, 404
+    def put(self, post_id):
+        print(f"Attempting to update post with id: {post_id}")
+        post = Post.query.get(post_id)
+        if not post:
+            print(f"Post with id {post_id} not found")
+            return {"message": "Post not found"}, 404
 
-    # Remove the current_user check for now, to match the post method
-    if post.user_id != current_user.id:
-         return {"message": "Unauthorized"}, 401
+        # Remove the current_user check for now, to match the post method
+        if post.user_id != current_user.id:
+            return {"message": "Unauthorized"}, 401
 
-    data = request.form
-    print("Received data:", data)
+        data = request.form
+        print("Received data:", data)
 
-    if not data:
-        print("No input data provided")
-        return {"message": "No input data provided"}, 400
+        if not data:
+            print("No input data provided")
+            return {"message": "No input data provided"}, 400
 
-    try:
-        original_price = float(post.price)
+        try:
+            original_price = float(post.price)
 
-        # Update post fields
-        post.price = data.get('price', post.price)
-        post.condition = data.get('condition', post.condition)
+            # Update post fields
+            post.price = data.get('price', post.price)
+            post.condition = data.get('condition', post.condition)
 
-        # Update textbook fields
-        textbook = post.textbook
-        textbook.title = data.get('title', textbook.title)
-        textbook.author = data.get('author', textbook.author)
-        if 'isbn' in data:
-            try:
-                isbn = int(data['isbn'])
-                Textbook.validate_isbn(isbn)
-                textbook.isbn = isbn
-            except ValueError as e:
-                return {"message": str(e)}, 400
+            # Update textbook fields
+            textbook = post.textbook
+            textbook.title = data.get('title', textbook.title)
+            textbook.author = data.get('author', textbook.author)
+            if 'isbn' in data:
+                try:
+                    isbn = int(data['isbn'])
+                    Textbook.validate_isbn(isbn)
+                    textbook.isbn = isbn
+                except ValueError as e:
+                    return {"message": str(e)}, 400
 
-        image_public_id = data.get('image_public_id')
-        if image_public_id:
-            post.img = image_public_id
+            image_public_id = data.get('image_public_id')
+            if image_public_id:
+                post.img = image_public_id
 
-        db.session.commit()
+            db.session.commit()
 
-        # Check for price drop
-        new_price = float(post.price)
-        if new_price < original_price:
-            watchlist_items = Watchlist.query.filter_by(post_id=post_id).all()
-            for item in watchlist_items:
-                user = User.query.get(item.user_id)
-                if user:
-                    subject = f"Price Drop Alert: {post.textbook.title}"
-                    body = f"The price of {post.textbook.title} has dropped to {post.price}. Check it out now!"
-                    recipients = [user.email]
-                    send_email(subject, recipients, body)
+            # Check for price drop
+            new_price = float(post.price)
+            if new_price < original_price:
+                watchlist_items = Watchlist.query.filter_by(post_id=post_id).all()
+                for item in watchlist_items:
+                    user = User.query.get(item.user_id)
+                    if user:
+                        subject = f"Price Drop Alert: {post.textbook.title}"
+                        body = f"The price of {post.textbook.title} has dropped to {post.price}. Check it out now!"
+                        recipients = [user.email]
+                        send_email(subject, recipients, body)
 
-        post_data = post.to_dict()
-        post_data['textbook'] = textbook.to_dict()
-        post_data['image_url'] = post.image_url
+            post_data = post.to_dict()
+            post_data['textbook'] = textbook.to_dict()
+            post_data['image_url'] = post.image_url
 
-        print("Returning updated post data:", post_data)
-        return post_data, 200
-    except Exception as e:
-        db.session.rollback()
-        print("Error updating post:", str(e))
-        return {"message": "Error updating post", "error": str(e)}, 500
+            print("Returning updated post data:", post_data)
+            return post_data, 200
+        except Exception as e:
+            db.session.rollback()
+            print("Error updating post:", str(e))
+            return {"message": "Error updating post", "error": str(e)}, 500
     
     def delete(self, post_id):
         post = Post.query.get(post_id)
