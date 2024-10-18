@@ -38,7 +38,7 @@ function CreatePost({ onNewPostCreated }) {
         (error, result) => {
           if (!error && result && result.event === "success") {
             console.log('Done! Here is the image info: ', result.info);
-            setImageUrl(result.info.secure_url);
+            setImageUrl(result.info.public_id);
           } else if (error) {
             console.error('Upload error:', error);
           }
@@ -74,7 +74,7 @@ function CreatePost({ onNewPostCreated }) {
     formData.append('price', price);
     formData.append('condition', condition);
     formData.append('user_id', user.id);
-    formData.append('image', imageUrl);
+    formData.append('image_public_id', imageUrl);
 
     try {
       const response = await fetch('/posts', {

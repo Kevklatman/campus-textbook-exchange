@@ -100,14 +100,9 @@ class PostResource(Resource):
         try:
             post = Post(user_id=user_id, textbook=textbook, price=price, condition=condition)
             
-            if 'image' in files:
-                image_file = files['image']
-                if image_file:
-                    print("Uploading image to Cloudinary...")
-                    # Upload to Cloudinary
-                    upload_result = upload(image_file)
-                    print("Cloudinary upload result:", upload_result)
-                    post.img = upload_result['public_id']
+            image_public_id = data.get('image_public_id')
+            if image_public_id:
+                post.img = image_public_id
             
             db.session.add(post)
             db.session.commit()
@@ -146,12 +141,9 @@ class PostResource(Resource):
         textbook.author = data.get('author', textbook.author)
         textbook.isbn = data.get('isbn', textbook.isbn)
 
-        if 'image' in request.files:
-            image_file = request.files['image']
-            if image_file:
-                # Upload to Cloudinary
-                upload_result = upload(image_file)
-                post.img = upload_result['public_id']
+        image_public_id = data.get('image_public_id')
+        if image_public_id:
+            post.img = image_public_id
 
         db.session.commit()
 

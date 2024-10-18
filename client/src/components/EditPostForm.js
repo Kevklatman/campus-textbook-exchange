@@ -44,7 +44,7 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
         (error, result) => {
           if (!error && result && result.event === "success") {
             console.log('Done! Here is the image info: ', result.info);
-            setNewImage(result.info.secure_url);
+            setNewImage(result.info.public_id);
           }
         }
       ).open();
@@ -62,7 +62,7 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
     formData.append('author', editedPost.textbook.author);
     formData.append('isbn', editedPost.textbook.isbn);
     if (newImage) {
-      formData.append('image', newImage);
+      formData.append('image_public_id', newImage);
     }
     onUpdatePost(formData);
   };
