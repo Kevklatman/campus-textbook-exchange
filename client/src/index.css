@@ -317,6 +317,7 @@ input[type="text"]:focus {
 .account-details-container {
   max-width: 600px;
   margin: 0 auto;
+  margin-top: 40px;
   padding: 40px;
   background-color: #fff;
   border-radius: 8px;
