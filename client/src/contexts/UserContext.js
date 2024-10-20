@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useCallback } from "react";
 
 export const UserContext = createContext();
 
@@ -6,6 +6,19 @@ export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
   const [watchlistPosts, setWatchlistPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const fetchWatchlist = useCallback(async (userId) => {
+    try {
+      const response = await fetch(`/users/${userId}/watchlist`);
+      if (response.ok) {
+        const watchlistData = await response.json();
+        setWatchlistPosts(watchlistData || []);
+      }
+    } catch (error) {
+      console.error("Error fetching watchlist:", error);
+      setWatchlistPosts([]);
+    }
+  }, []);
 
   useEffect(() => {
     // Check if user is logged in
@@ -28,20 +41,7 @@ export function UserProvider({ children }) {
         setWatchlistPosts([]);
         setLoading(false);
       });
-  }, []);
-
-  const fetchWatchlist = async (userId) => {
-    try {
-      const response = await fetch(`/users/${userId}/watchlist`);
-      if (response.ok) {
-        const watchlistData = await response.json();
-        setWatchlistPosts(watchlistData || []);
-      }
-    } catch (error) {
-      console.error("Error fetching watchlist:", error);
-      setWatchlistPosts([]);
-    }
-  };
+  }, [fetchWatchlist]);
 
   const login = (userData) => {
     setUser(userData);
@@ -77,8 +77,8 @@ export function UserProvider({ children }) {
       });
 
       if (response.ok) {
-        const updatedWatchlist = await response.json();
-        setWatchlistPosts(updatedWatchlist);
+        const newWatchlistItem = await response.json();
+        setWatchlistPosts(prevWatchlist => [...prevWatchlist, newWatchlistItem]);
       }
     } catch (error) {
       console.error('Error adding to watchlist:', error);
@@ -109,7 +109,8 @@ export function UserProvider({ children }) {
       logout,
       watchlistPosts,
       addToWatchlist,
-      removeFromWatchlist
+      removeFromWatchlist,
+      fetchWatchlist
     }}>
       {children}
     </UserContext.Provider>

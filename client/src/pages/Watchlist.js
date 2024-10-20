@@ -1,9 +1,15 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { Link } from 'react-router-dom';
 
 const Watchlist = () => {
-  const { user, watchlistPosts, removeFromWatchlist } = useContext(UserContext);
+  const { user, watchlistPosts, removeFromWatchlist, fetchWatchlist } = useContext(UserContext);
+
+  useEffect(() => {
+    if (user) {
+      fetchWatchlist(user.id);
+    }
+  }, [user, fetchWatchlist]);
 
   if (!user) {
     return <div>Please log in to view your watchlist.</div>;

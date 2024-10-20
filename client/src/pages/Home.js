@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import PostList from '../components/PostList';
 
 function Home() {
-  const { user, addToWatchlist } = useContext(UserContext);
+  const { user, watchlistPosts, addToWatchlist, removeFromWatchlist } = useContext(UserContext);
   const { posts } = useContext(PostContext);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPosts, setFilteredPosts] = useState(posts);
@@ -28,11 +28,17 @@ function Home() {
       return false;
     });
     setFilteredPosts(filtered);
-  }, [searchTerm, posts]);
+  }, [searchTerm, posts, watchlistPosts]);
 
   const handleAddToWatchlist = async (postId, textbookId) => {
     if (user) {
       await addToWatchlist(postId, textbookId);
+    }
+  };
+
+  const handleRemoveFromWatchlist = async (postId) => {
+    if (user) {
+      await removeFromWatchlist(postId);
     }
   };
 
@@ -50,6 +56,8 @@ function Home() {
           <PostList
             posts={filteredPosts}
             onAddToWatchlist={handleAddToWatchlist}
+            onRemoveFromWatchlist={handleRemoveFromWatchlist}
+            watchlistPosts={watchlistPosts}
           />
         </div>
       ) : (
