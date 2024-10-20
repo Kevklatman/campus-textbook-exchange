@@ -32,7 +32,7 @@ function Home() {
       return false;
     });
     setFilteredPosts(filtered);
-  }, [searchTerm, posts, watchlistPosts]);
+  }, [searchTerm, posts]);
 
   const handleAddToWatchlist = async (postId, textbookId) => {
     if (user) {
@@ -61,7 +61,7 @@ function Home() {
             posts={filteredPosts}
             onAddToWatchlist={handleAddToWatchlist}
             onRemoveFromWatchlist={handleRemoveFromWatchlist}
-            watchlistPosts={watchlistPosts}
+            showEditButton={false}
           />
         </div>
       ) : (

@@ -5,7 +5,7 @@ import { PostContext } from "../contexts/PostContext";
 import "../index.css";
 
 function PostList({ posts, onEditPost, showEditButton, onAddToWatchlist, onRemoveFromWatchlist }) {
-  const { user } = useContext(UserContext);
+  const { user, watchlistPosts } = useContext(UserContext);
   const { deletePost } = useContext(PostContext);
 
   const handleEditClick = (post) => {
@@ -17,14 +17,11 @@ function PostList({ posts, onEditPost, showEditButton, onAddToWatchlist, onRemov
   };
 
   const handleWatchlistClick = (postId, textbookId) => {
-    if (onAddToWatchlist) {
-      onAddToWatchlist(postId, textbookId);
-    }
-  };
-
-  const handleRemoveFromWatchlistClick = (postId) => {
-    if (onRemoveFromWatchlist) {
+    const isInWatchlist = watchlistPosts.some(watchlistPost => watchlistPost.id === postId);
+    if (isInWatchlist) {
       onRemoveFromWatchlist(postId);
+    } else {
+      onAddToWatchlist(postId, textbookId);
     }
   };
 
@@ -59,24 +56,22 @@ function PostList({ posts, onEditPost, showEditButton, onAddToWatchlist, onRemov
                 <p>Condition: {post.condition}</p>
               </div>
               {post.id && (
-                <Link to={`/posts/${post.id}`} className="view-details-link">
+                <Link to={`/posts/${post.id}`} className="btn btn-secondary">
                   View Details
                 </Link>
               )}
               {showEditButton && user && post.user.id === user.id && (
                 <>
-<button className="btn-secondary" onClick={() => handleEditClick(post)}>Edit</button>
-<button className="btn-danger" onClick={() => handleDeleteClick(post.id)}>Delete</button>
+                  <button className="btn btn-secondary" onClick={() => handleEditClick(post)}>Edit</button>
+                  <button className="btn btn-danger" onClick={() => handleDeleteClick(post.id)}>Delete</button>
                 </>
               )}
-{onAddToWatchlist && (
-  <button className="btn-success" onClick={() => handleWatchlistClick(post.id, post.textbook.id)}>
-    Add to Watchlist
-  </button>
-)}
-              {onRemoveFromWatchlist && (
-                <button onClick={() => handleRemoveFromWatchlistClick(post.id)}>
-                  Remove from Watchlist
+              {user && (
+                <button 
+                  className={watchlistPosts.some(watchlistPost => watchlistPost.id === post.id) ? "btn btn-danger" : "btn btn-success"}
+                  onClick={() => handleWatchlistClick(post.id, post.textbook.id)}
+                >
+                  {watchlistPosts.some(watchlistPost => watchlistPost.id === post.id) ? "Remove from Watchlist" : "Add to Watchlist"}
                 </button>
               )}
             </li>
