@@ -5,7 +5,7 @@ import PostList from '../components/PostList';
 import EditPostForm from '../components/EditPostForm';
 
 function MyPosts() {
-  const { user } = useContext(UserContext);
+  const { user, watchlistPosts, addToWatchlist, removeFromWatchlist } = useContext(UserContext);
   const { posts, updatePost, deletePost, fetchAllPosts } = useContext(PostContext);
   const [myPosts, setMyPosts] = useState([]);
   const [editingPost, setEditingPost] = useState(null);
@@ -56,6 +56,22 @@ function MyPosts() {
     }
   };
 
+  const handleAddToWatchlist = async (postId, textbookId) => {
+    try {
+      await addToWatchlist(postId, textbookId);
+    } catch (error) {
+      console.error('Error adding to watchlist:', error);
+    }
+  };
+
+  const handleRemoveFromWatchlist = async (postId) => {
+    try {
+      await removeFromWatchlist(postId);
+    } catch (error) {
+      console.error('Error removing from watchlist:', error);
+    }
+  };
+
   if (!user) {
     return <div>Please log in to view your posts.</div>;
   }
@@ -74,6 +90,8 @@ function MyPosts() {
           posts={myPosts}
           onEditPost={handleEditPost}
           onDeletePost={handleDeletePost}
+          onAddToWatchlist={handleAddToWatchlist}
+          onRemoveFromWatchlist={handleRemoveFromWatchlist}
           showEditButton={true}
         />
       )}

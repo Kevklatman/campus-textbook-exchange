@@ -4,17 +4,8 @@ import { UserContext } from "../contexts/UserContext";
 import { PostContext } from "../contexts/PostContext";
 import "../index.css";
 
-function PostList({ posts, onEditPost, showEditButton, onAddToWatchlist, onRemoveFromWatchlist }) {
+function PostList({ posts, onEditPost, onDeletePost, showEditButton, onAddToWatchlist, onRemoveFromWatchlist }) {
   const { user, watchlistPosts } = useContext(UserContext);
-  const { deletePost } = useContext(PostContext);
-
-  const handleEditClick = (post) => {
-    onEditPost(post);
-  };
-
-  const handleDeleteClick = (postId) => {
-    deletePost(postId);
-  };
 
   const handleWatchlistClick = (postId, textbookId) => {
     const isInWatchlist = watchlistPosts.some(watchlistPost => watchlistPost.id === postId);
@@ -62,8 +53,8 @@ function PostList({ posts, onEditPost, showEditButton, onAddToWatchlist, onRemov
               )}
               {showEditButton && user && post.user.id === user.id && (
                 <>
-                  <button className="btn btn-secondary" onClick={() => handleEditClick(post)}>Edit</button>
-                  <button className="btn btn-danger" onClick={() => handleDeleteClick(post.id)}>Delete</button>
+                  <button className="btn btn-secondary" onClick={() => onEditPost(post)}>Edit</button>
+                  <button className="btn btn-danger" onClick={() => onDeletePost(post.id)}>Delete</button>
                 </>
               )}
               {user && (
