@@ -78,7 +78,7 @@ function MyPosts() {
 
   return (
     <div>
-      <h2>My Posts</h2>
+  
       {editingPost ? (
         <EditPostForm
           post={editingPost}
