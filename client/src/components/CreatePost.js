@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Redirect } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
+import { PostContext } from '../contexts/PostContext';
 
 function CreatePost({ onNewPostCreated }) {
   const [author, setAuthor] = useState('');
@@ -11,6 +12,7 @@ function CreatePost({ onNewPostCreated }) {
   const [imageUrl, setImageUrl] = useState('');
   const [errors, setErrors] = useState({});
   const { user } = useContext(UserContext);
+  const { addPost } = useContext(PostContext);
 
   useEffect(() => {
     // Load the Cloudinary widget script
@@ -83,7 +85,10 @@ function CreatePost({ onNewPostCreated }) {
       });
 
       if (response.ok) {
-        // Post created successfully, reset form fields
+        const newPost = await response.json();
+        addPost(newPost);
+        
+        // Reset form fields
         setAuthor('');
         setTitle('');
         setIsbn('');
@@ -92,7 +97,7 @@ function CreatePost({ onNewPostCreated }) {
         setImageUrl('');
         setErrors({});
 
-        // Call the onNewPostCreated function passed from the Home component
+        // Call the onNewPostCreated function passed from the parent component
         onNewPostCreated();
       } else {
         console.error('Failed to create post');

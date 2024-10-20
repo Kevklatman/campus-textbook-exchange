@@ -6,9 +6,13 @@ import PostList from '../components/PostList';
 
 function Home() {
   const { user, watchlistPosts, addToWatchlist, removeFromWatchlist } = useContext(UserContext);
-  const { posts } = useContext(PostContext);
+  const { posts, fetchAllPosts } = useContext(PostContext);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPosts, setFilteredPosts] = useState(posts);
+
+  useEffect(() => {
+    fetchAllPosts();
+  }, [fetchAllPosts]);
 
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);

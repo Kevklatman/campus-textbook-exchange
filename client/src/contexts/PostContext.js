@@ -1,23 +1,27 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 
 export const PostContext = createContext();
 
 export const PostProvider = ({ children }) => {
   const [posts, setPosts] = useState([]);
 
-  useEffect(() => {
-    const fetchAllPosts = async () => {
-      try {
-        const response = await fetch('/posts');
-        const data = await response.json();
-        setPosts(data);
-      } catch (error) {
-        console.error('Error fetching all posts:', error);
-      }
-    };
-
-    fetchAllPosts();
+  const fetchAllPosts = useCallback(async () => {
+    try {
+      const response = await fetch('/posts');
+      const data = await response.json();
+      setPosts(data);
+    } catch (error) {
+      console.error('Error fetching all posts:', error);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchAllPosts();
+  }, [fetchAllPosts]);
+
+  const addPost = (newPost) => {
+    setPosts(prevPosts => [newPost, ...prevPosts]);
+  };
 
   const updatePost = async (updatedPost) => {
     try {
@@ -50,7 +54,7 @@ export const PostProvider = ({ children }) => {
   };
 
   return (
-    <PostContext.Provider value={{ posts, setPosts, updatePost, deletePost }}>
+    <PostContext.Provider value={{ posts, setPosts, addPost, updatePost, deletePost, fetchAllPosts }}>
       {children}
     </PostContext.Provider>
   );

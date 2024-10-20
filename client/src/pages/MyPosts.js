@@ -1,4 +1,3 @@
-// src/pages/MyPosts.js
 import React, { useContext, useEffect, useState } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { PostContext } from '../contexts/PostContext';
@@ -7,9 +6,13 @@ import EditPostForm from '../components/EditPostForm';
 
 function MyPosts() {
   const { user } = useContext(UserContext);
-  const { posts, updatePost, deletePost } = useContext(PostContext);
+  const { posts, updatePost, deletePost, fetchAllPosts } = useContext(PostContext);
   const [myPosts, setMyPosts] = useState([]);
   const [editingPost, setEditingPost] = useState(null);
+
+  useEffect(() => {
+    fetchAllPosts();
+  }, [fetchAllPosts]);
 
   useEffect(() => {
     if (user) {
