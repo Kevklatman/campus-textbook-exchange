@@ -1,5 +1,4 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Redirect } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
 import { PostContext } from '../contexts/PostContext';
 
@@ -25,10 +24,6 @@ function CreatePost({ onNewPostCreated }) {
       document.body.removeChild(script);
     };
   }, []);
-
-  if (!user) {
-    return <Redirect to="/login" />;
-  }
 
   const handleImageUpload = () => {
     if (window.cloudinary) {
@@ -63,6 +58,8 @@ function CreatePost({ onNewPostCreated }) {
     } else if (!/^\d{13}$/.test(isbn)) {
       validationErrors.isbn = 'ISBN must be a 13-digit number';
     }
+    if (!price) validationErrors.price = 'Price is required';
+    if (!condition) validationErrors.condition = 'Condition is required';
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -102,18 +99,19 @@ function CreatePost({ onNewPostCreated }) {
       } else {
         console.error('Failed to create post');
         // Display error message to the user
+        setErrors({ submit: 'Failed to create post. Please try again.' });
       }
     } catch (error) {
       console.error('Error creating post:', error);
       // Display error message to the user
+      setErrors({ submit: 'An error occurred. Please try again.' });
     }
   };
 
   return (
-    <div>
-      <h2>Create Post</h2>
+    <div className="create-post-form">
       <form onSubmit={handleSubmit}>
-        <div>
+        <div className="form-group">
           <label htmlFor="author">Author:</label>
           <input
             type="text"
@@ -123,9 +121,9 @@ function CreatePost({ onNewPostCreated }) {
             aria-required="true"
             aria-invalid={errors.author ? 'true' : 'false'}
           />
-          {errors.author && <span>{errors.author}</span>}
+          {errors.author && <span className="error">{errors.author}</span>}
         </div>
-        <div>
+        <div className="form-group">
           <label htmlFor="title">Title:</label>
           <input
             type="text"
@@ -135,9 +133,9 @@ function CreatePost({ onNewPostCreated }) {
             aria-required="true"
             aria-invalid={errors.title ? 'true' : 'false'}
           />
-          {errors.title && <span>{errors.title}</span>}
+          {errors.title && <span className="error">{errors.title}</span>}
         </div>
-        <div>
+        <div className="form-group">
           <label htmlFor="isbn">ISBN:</label>
           <input
             type="text"
@@ -147,33 +145,40 @@ function CreatePost({ onNewPostCreated }) {
             aria-required="true"
             aria-invalid={errors.isbn ? 'true' : 'false'}
           />
-          {errors.isbn && <span>{errors.isbn}</span>}
+          {errors.isbn && <span className="error">{errors.isbn}</span>}
         </div>
-        <div>
+        <div className="form-group">
           <label htmlFor="price">Price:</label>
           <input
-            type="text"
+            type="number"
             id="price"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
+            aria-required="true"
+            aria-invalid={errors.price ? 'true' : 'false'}
           />
+          {errors.price && <span className="error">{errors.price}</span>}
         </div>
-        <div>
+        <div className="form-group">
           <label htmlFor="condition">Condition:</label>
           <input
             type="text"
             id="condition"
             value={condition}
             onChange={(e) => setCondition(e.target.value)}
+            aria-required="true"
+            aria-invalid={errors.condition ? 'true' : 'false'}
           />
+          {errors.condition && <span className="error">{errors.condition}</span>}
         </div>
-        <div>
-          <button type="button" onClick={handleImageUpload}>
+        <div className="form-group">
+          <button type="button" onClick={handleImageUpload} className="btn btn-secondary">
             Upload Image
           </button>
           {imageUrl && <img src={imageUrl} alt="Uploaded" style={{ maxWidth: '200px' }} />}
         </div>
-        <button type="submit">Create Post</button>
+        {errors.submit && <div className="error">{errors.submit}</div>}
+        <button type="submit" className="btn btn-success">Create Post</button>
       </form>
     </div>
   );
