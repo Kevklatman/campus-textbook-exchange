@@ -37,8 +37,8 @@ const Watchlist = () => {
             <p>Condition: {item.condition}</p>
           </div>
           <div className="watchlist-actions">
-            <Link to={`/posts/${item.id}`} className="view-details-link">View Details</Link>
-            <button onClick={() => removeFromWatchlist(item.id)} className="remove-button">Remove from Watchlist</button>
+            <Link to={`/posts/${item.id}`} className="btn btn-secondary">View Details</Link>
+            <button onClick={() => removeFromWatchlist(item.id)} className="btn btn-danger">Remove from Watchlist</button>
           </div>
         </div>
       ))}

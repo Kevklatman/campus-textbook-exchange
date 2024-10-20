@@ -37,7 +37,7 @@ function CommentSection({ comments, onCommentSubmit }) {
             value={newComment}
             onChange={handleCommentChange}
           ></textarea>
-          <button onClick={handleSubmit}>Submit</button>
+          <button className="btn-success" onClick={handleSubmit}>Submit</button>
         </div>
       ) : (
         <p>Please log in to leave a comment.</p>

@@ -1,6 +1,5 @@
 import React, { useContext } from 'react';
 import { UserContext } from '../contexts/UserContext';
-import '../index.css';
 
 function WatchlistButton({ postId, textbookId }) {
   const { user, watchlistPosts, addToWatchlist, removeFromWatchlist } = useContext(UserContext);
@@ -19,7 +18,7 @@ function WatchlistButton({ postId, textbookId }) {
 
   return (
     <button
-      className="watchlist-button"
+      className={isInWatchlist ? "btn-danger" : "btn-success"}
       onClick={handleWatchlistClick}
     >
       {isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}

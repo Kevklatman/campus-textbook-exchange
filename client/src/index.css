@@ -42,23 +42,75 @@ a:hover {
   color: #0056b3;
 }
 
-.btn {
+/* Button styles */
+.btn,
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-success,
+.watchlist-button,
+.delete-account-button,
+.navbar-logout,
+.view-details-link,
+.remove-button {
   display: inline-block;
-  padding: 12px 24px;
-  font-size: 18px;
+  padding: 8px 16px;
+  font-size: 16px;
   font-weight: bold;
   text-align: center;
   text-decoration: none;
-  background-color: #007bff;
-  color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.3s;
 }
 
-.btn:hover {
+.btn,
+.btn-primary,
+.watchlist-button,
+.navbar-logout,
+.view-details-link {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.btn:hover,
+.btn-primary:hover,
+.watchlist-button:hover,
+.navbar-logout:hover,
+.view-details-link:hover {
   background-color: #0056b3;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: #fff;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+
+.btn-danger,
+.delete-account-button,
+.remove-button {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.btn-danger:hover,
+.delete-account-button:hover,
+.remove-button:hover {
+  background-color: #c82333;
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.btn-success:hover {
+  background-color: #218838;
 }
 
 .form-group {
@@ -74,6 +126,8 @@ label {
 
 input[type='text'],
 input[type='number'],
+input[type='email'],
+input[type='password'],
 textarea {
   width: 100%;
   padding: 12px;
@@ -85,11 +139,14 @@ textarea {
 
 input[type='text']:focus,
 input[type='number']:focus,
+input[type='email']:focus,
+input[type='password']:focus,
 textarea:focus {
   outline: none;
   border-color: #007bff;
 }
 
+/* Post List styles */
 .post-list {
   max-width: 800px;
   margin: 0 auto;
@@ -154,24 +211,7 @@ textarea:focus {
   margin-bottom: 10px;
 }
 
-input[type="text"] {
-  padding: 12px;
-  font-size: 18px;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  transition: border-color 0.3s;
-}
-
-input[type="text"]:focus {
-  outline: none;
-  border-color: #007bff;
-}
-
-/* index.css */
-
-/* ... previous styles ... */
-
+/* Post Details styles */
 .post-details-container {
   max-width: 800px;
   margin: 0 auto;
@@ -188,50 +228,7 @@ input[type="text"]:focus {
   color: #343a40;
 }
 
-.post-image-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 30px;
-}
-
-.post-image {
-  max-width: 400px;
-  max-height: 400px;
-  object-fit: cover;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.post-details {
-  margin-bottom: 30px;
-}
-
-.post-details p {
-  font-size: 18px;
-  margin-bottom: 10px;
-  color: #495057;
-}
-
-.watchlist-button {
-  display: inline-block;
-  padding: 12px 24px;
-  font-size: 18px;
-  font-weight: bold;
-  text-align: center;
-  text-decoration: none;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  margin-bottom: 30px;
-}
-
-.watchlist-button:hover {
-  background-color: #0056b3;
-}
-
+/* Comment Section styles */
 .comment-section {
   margin-top: 40px;
 }
@@ -275,45 +272,7 @@ input[type="text"]:focus {
   margin-bottom: 10px;
 }
 
-.comment-form button {
-  padding: 12px 24px;
-  font-size: 18px;
-  font-weight: bold;
-  text-align: center;
-  text-decoration: none;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.comment-form button:hover {
-  background-color: #0056b3;
-}
-
-/* WatchlistButton.js styles */
-.watchlist-button {
-  display: inline-block;
-  padding: 12px 24px;
-  font-size: 18px;
-  font-weight: bold;
-  text-align: center;
-  text-decoration: none;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.watchlist-button:hover {
-  background-color: #0056b3;
-}
-
-/* AccountDetails.js styles */
+/* Account Details styles */
 .account-details-container {
   max-width: 600px;
   margin: 0 auto;
@@ -337,30 +296,7 @@ input[type="text"]:focus {
   color: #495057;
 }
 
-.delete-account-button {
-  display: inline-block;
-  padding: 12px 24px;
-  font-size: 18px;
-  font-weight: bold;
-  text-align: center;
-  text-decoration: none;
-  background-color: #dc3545;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  margin-top: 20px;
-}
-
-.delete-account-button:hover {
-  background-color: #c82333;
-}
-
-/* index.css */
-
-/* ... previous styles ... */
-
+/* Navbar styles */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -397,23 +333,6 @@ input[type="text"]:focus {
   color: #343a40;
 }
 
-.navbar-logout {
-  padding: 8px 16px;
-  font-size: 16px;
-  font-weight: bold;
-  text-align: center;
-  text-decoration: none;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.navbar-logout:hover {
-  background-color: #0056b3;
-}
 /* Watchlist styles */
 .watchlist-container {
   max-width: 800px;
@@ -476,40 +395,70 @@ input[type="text"]:focus {
   align-items: center;
 }
 
-.view-details-link {
+/* Login and Register styles */
+.login-register {
+  display: flex;
+  justify-content: space-between;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+.login-form,
+.register-form {
+  width: 45%;
+}
+
+.error {
+  color: #dc3545;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+/* Create Post Page styles */
+.create-post-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+.create-post-title {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 30px;
+  color: #343a40;
+  text-align: center;
+}
+
+.create-post-content {
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn,
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-success {
   display: inline-block;
   padding: 8px 16px;
   font-size: 16px;
   font-weight: bold;
   text-align: center;
   text-decoration: none;
-  background-color: #007bff;
-  color: #fff;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.3s;
 }
 
-.view-details-link:hover {
-  background-color: #0056b3;
-}
-
-.remove-button {
-  display: inline-block;
-  padding: 8px 16px;
-  font-size: 16px;
-  font-weight: bold;
-  text-align: center;
-  text-decoration: none;
+.btn-danger {
   background-color: #dc3545;
   color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s;
 }
 
-.remove-button:hover {
+.btn-danger:hover {
   background-color: #c82333;
 }

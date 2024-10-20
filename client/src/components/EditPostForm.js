@@ -131,10 +131,10 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
           />
         )}
       </div>
-      <button type="submit">Update</button>
-      <button type="button" onClick={onCancel}>
-        Cancel
-      </button>
+      <button className="btn-success" type="submit">Update</button>
+<button className="btn-secondary" type="button" onClick={onCancel}>
+  Cancel
+</button>
     </form>
   );
 }

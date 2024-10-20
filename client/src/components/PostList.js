@@ -65,15 +65,15 @@ function PostList({ posts, onEditPost, showEditButton, onAddToWatchlist, onRemov
               )}
               {showEditButton && user && post.user.id === user.id && (
                 <>
-                  <button onClick={() => handleEditClick(post)}>Edit</button>
-                  <button onClick={() => handleDeleteClick(post.id)}>Delete</button>
+<button className="btn-secondary" onClick={() => handleEditClick(post)}>Edit</button>
+<button className="btn-danger" onClick={() => handleDeleteClick(post.id)}>Delete</button>
                 </>
               )}
-              {onAddToWatchlist && (
-                <button onClick={() => handleWatchlistClick(post.id, post.textbook.id)}>
-                  Add to Watchlist
-                </button>
-              )}
+{onAddToWatchlist && (
+  <button className="btn-success" onClick={() => handleWatchlistClick(post.id, post.textbook.id)}>
+    Add to Watchlist
+  </button>
+)}
               {onRemoveFromWatchlist && (
                 <button onClick={() => handleRemoveFromWatchlistClick(post.id)}>
                   Remove from Watchlist

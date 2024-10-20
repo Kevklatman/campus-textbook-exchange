@@ -99,9 +99,9 @@ function LoginAndRegister() {
                   className="error"
                 />
               </div>
-              <button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Logging in..." : "Login"}
-              </button>
+              <button type="submit" className="btn-success" disabled={isSubmitting}>
+  {isSubmitting ? "Logging in..." : "Login"}
+</button>
             </Form>
           )}
         </Formik>
@@ -135,9 +135,9 @@ function LoginAndRegister() {
                   className="error"
                 />
               </div>
-              <button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Signing up..." : "Sign Up"}
-              </button>
+              <button type="submit" className="btn-success" disabled={isSubmitting}>
+  {isSubmitting ? "Signing up..." : "Sign Up"}
+</button>
             </Form>
           )}
         </Formik>
