@@ -339,6 +339,7 @@ textarea:focus {
 .watchlist-container {
   max-width: 800px;
   margin: 0 auto;
+  margin-top: 24px;
   padding: 40px;
   background-color: #fff;
   border-radius: 8px;
@@ -350,7 +351,7 @@ textarea:focus {
   font-weight: bold;
   margin-bottom: 30px;
   color: #343a40;
-  text-align: center;
+  text-align: left;
 }
 
 .watchlist-item {
