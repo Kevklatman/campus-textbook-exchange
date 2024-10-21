@@ -23,7 +23,7 @@ export const PostProvider = ({ children }) => {
     setPosts(prevPosts => [newPost, ...prevPosts]);
   };
 
-  const updatePost = async (updatedPost) => {
+  const updatePost = useCallback(async (updatedPost) => {
     try {
       const response = await fetch(`/posts/${updatedPost.id}`, {
         method: 'PUT',
@@ -33,8 +33,9 @@ export const PostProvider = ({ children }) => {
         body: JSON.stringify(updatedPost),
       });
       if (response.ok) {
+        const updatedPostData = await response.json();
         setPosts((prevPosts) =>
-          prevPosts.map((post) => (post.id === updatedPost.id ? updatedPost : post))
+          prevPosts.map((post) => (post.id === updatedPostData.id ? updatedPostData : post))
         );
       } else {
         throw new Error('Error updating post');
@@ -42,7 +43,7 @@ export const PostProvider = ({ children }) => {
     } catch (error) {
       console.error('Error updating post:', error);
     }
-  };
+  }, []);
 
   const deletePost = async (postId) => {
     try {

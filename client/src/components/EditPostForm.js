@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { PostContext } from '../contexts/PostContext';
 
 function EditPostForm({ post, onUpdatePost, onCancel }) {
   const [editedPost, setEditedPost] = useState(post);
   const [newImage, setNewImage] = useState(null);
+  const { updatePost } = useContext(PostContext);
 
   useEffect(() => {
     // Load the Cloudinary widget script
@@ -53,7 +55,7 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData();
     formData.append('price', editedPost.price);
@@ -64,7 +66,23 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
     if (newImage) {
       formData.append('image_public_id', newImage);
     }
-    onUpdatePost(formData);
+
+    try {
+      const response = await fetch(`/posts/${editedPost.id}`, {
+        method: 'PUT',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update post');
+      }
+
+      const updatedPost = await response.json();
+      updatePost(updatedPost);
+      onUpdatePost(updatedPost);
+    } catch (error) {
+      console.error('Error updating post:', error);
+    }
   };
 
   return (
@@ -125,16 +143,16 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
         </button>
         {(newImage || editedPost.image_url) && (
           <img 
-            src={newImage || editedPost.image_url} 
+            src={newImage ? `https://res.cloudinary.com/duhjluee1/image/upload/${newImage}` : editedPost.image_url} 
             alt="Post" 
             style={{ maxWidth: '200px' }} 
           />
         )}
       </div>
       <button className="btn-success" type="submit">Update</button>
-<button className="btn-secondary" type="button" onClick={onCancel}>
-  Cancel
-</button>
+      <button className="btn-secondary" type="button" onClick={onCancel}>
+        Cancel
+      </button>
     </form>
   );
 }

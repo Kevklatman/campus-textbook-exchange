@@ -24,25 +24,12 @@ function MyPosts() {
     setEditingPost(post);
   };
 
-  const handleUpdatePost = async (formData) => {
+  const handleUpdatePost = async (updatedPost) => {
     try {
-      const postId = editingPost.id;
-      console.log("Sending update for post ID:", postId);
-  
-      const response = await fetch(`/posts/${postId}`, {
-        method: 'PUT',
-        body: formData,
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
-  
-      const updatedPost = await response.json();
-      console.log("Received updated post:", updatedPost);
-      updatePost(updatedPost);
+      await updatePost(updatedPost);
       setEditingPost(null);
+      // Refresh the posts after updating
+      fetchAllPosts();
     } catch (error) {
       console.error('Error updating post:', error.message);
     }
@@ -78,7 +65,6 @@ function MyPosts() {
 
   return (
     <div>
-  
       {editingPost ? (
         <EditPostForm
           post={editingPost}
