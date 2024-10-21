@@ -405,6 +405,7 @@ class SignupResource(Resource):
 
         email = data.get('email')
         password = data.get('password')
+        name = data.get('name')
 
         if not email or not password:
             logger.warning("Email or password missing in signup attempt")
@@ -420,7 +421,7 @@ class SignupResource(Resource):
             logger.warning(f"Signup attempt with existing email: {email}")
             return {"message": "Email already exists"}, 400
 
-        new_user = User(email=email)
+        new_user = User(email=email, name=name)
         new_user.password_hash = password  # This will use the setter method to hash the password
 
         try:
