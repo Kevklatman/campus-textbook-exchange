@@ -64,40 +64,40 @@ class PostResource(Resource):
         
 
     def post(self):
-        data = request.form
-        files = request.files
-        print("Received data:", data)
-        print("Received files:", files)
-
-        user_id = data.get('user_id')
-        isbn = data.get('isbn')
-        price = data.get('price')
-        condition = data.get('condition')
-
-        if not user_id or not isbn or not price or not condition:
-            return {"message": "User ID, ISBN, price, and condition are required"}, 400
-
         try:
-            isbn = int(isbn)
-            Textbook.validate_isbn(isbn)
-        except ValueError as e:
-            return {"message": str(e)}, 400
+            data = request.form
+            files = request.files
+            print("Received data:", data)
+            print("Received files:", files)
 
-        user = User.query.get(user_id)
-        if not user:
-            return {"message": "User not found"}, 404
+            user_id = data.get('user_id')
+            isbn = data.get('isbn')
+            price = data.get('price')
+            condition = data.get('condition')
 
-        textbook = Textbook.query.filter_by(isbn=isbn).first()
-        if not textbook:
-            textbook_data = {
-                'isbn': isbn,
-                'title': data.get('title', ''),
-                'author': data.get('author', '')
-            }
-            textbook = Textbook(**textbook_data)
-            db.session.add(textbook)
+            if not user_id or not isbn or not price or not condition:
+                return {"message": "User ID, ISBN, price, and condition are required"}, 400
 
-        try:
+            try:
+                isbn = int(isbn)
+                Textbook.validate_isbn(isbn)
+            except ValueError as e:
+                return {"message": str(e)}, 400
+
+            user = User.query.get(user_id)
+            if not user:
+                return {"message": "User not found"}, 404
+
+            textbook = Textbook.query.filter_by(isbn=isbn).first()
+            if not textbook:
+                textbook_data = {
+                    'isbn': isbn,
+                    'title': data.get('title', ''),
+                    'author': data.get('author', '')
+                }
+                textbook = Textbook(**textbook_data)
+                db.session.add(textbook)
+
             post = Post(user_id=user_id, textbook=textbook, price=price, condition=condition)
             
             image_public_id = data.get('image_public_id')
@@ -117,7 +117,7 @@ class PostResource(Resource):
         except Exception as e:
             print("Error creating post:", str(e))
             db.session.rollback()
-            return {"message": "Error creating post", "error": str(e)}, 500
+            return {"message": f"Error creating post: {str(e)}"}, 500
 
     def put(self, post_id):
         print(f"Attempting to update post with id: {post_id}")

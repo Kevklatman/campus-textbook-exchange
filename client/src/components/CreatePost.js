@@ -10,6 +10,7 @@ function CreatePost({ onNewPostCreated }) {
   const [condition, setCondition] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [errors, setErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState('');
   const { user } = useContext(UserContext);
   const { addPost } = useContext(PostContext);
 
@@ -36,18 +37,23 @@ function CreatePost({ onNewPostCreated }) {
           if (!error && result && result.event === "success") {
             console.log('Done! Here is the image info: ', result.info);
             setImageUrl(result.info.public_id);
+            setErrors(prevErrors => ({ ...prevErrors, image: null }));
           } else if (error) {
             console.error('Upload error:', error);
+            setErrors(prevErrors => ({ ...prevErrors, image: 'Failed to upload image. Please try again.' }));
           }
         }
       ).open();
     } else {
       console.error('Cloudinary widget is not loaded yet');
+      setErrors(prevErrors => ({ ...prevErrors, image: 'Image upload is not available. Please try again later.' }));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrors({});
+    setSuccessMessage('');
 
     // Perform form validation
     const validationErrors = {};
@@ -81,9 +87,10 @@ function CreatePost({ onNewPostCreated }) {
         body: formData,
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const newPost = await response.json();
-        addPost(newPost);
+        addPost(data);
         
         // Reset form fields
         setAuthor('');
@@ -94,22 +101,23 @@ function CreatePost({ onNewPostCreated }) {
         setImageUrl('');
         setErrors({});
 
-        // Call the onNewPostCreated function passed from the parent component
+        setSuccessMessage('Post created successfully!');
         onNewPostCreated();
       } else {
-        console.error('Failed to create post');
-        // Display error message to the user
-        setErrors({ submit: 'Failed to create post. Please try again.' });
+        console.error('Failed to create post:', data);
+        setErrors({ submit: data.message || 'Failed to create post. Please try again.' });
+        setSuccessMessage('');
       }
     } catch (error) {
       console.error('Error creating post:', error);
-      // Display error message to the user
-      setErrors({ submit: 'An error occurred. Please try again.' });
+      setSuccessMessage('');
     }
   };
 
   return (
     <div className="create-post-form">
+      {successMessage && <div className="success-message">{successMessage}</div>}
+      {errors.submit && <div className="error-message">{errors.submit}</div>}
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="author">Author:</label>
@@ -173,11 +181,17 @@ function CreatePost({ onNewPostCreated }) {
         </div>
         <div className="form-group">
           <button type="button" onClick={handleImageUpload} className="btn btn-secondary">
-            Upload Image
+            {imageUrl ? 'Change Image' : 'Upload Image'}
           </button>
-          {imageUrl && <img src={imageUrl} alt="Uploaded" style={{ maxWidth: '200px' }} />}
+          {imageUrl && (
+            <img 
+              src={`https://res.cloudinary.com/duhjluee1/image/upload/${imageUrl}`} 
+              alt="Uploaded" 
+              style={{ maxWidth: '200px', marginTop: '10px' }} 
+            />
+          )}
+          {errors.image && <span className="error">{errors.image}</span>}
         </div>
-        {errors.submit && <div className="error">{errors.submit}</div>}
         <button type="submit" className="btn btn-success">Create Post</button>
       </form>
     </div>
