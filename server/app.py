@@ -93,7 +93,7 @@ class PostResource(Resource):
                 textbook_data = {
                     'isbn': isbn,
                     'title': data.get('title', ''),
-                    'author': data.get('author', '')
+                    'author': data.get('author', ''),
                 }
                 textbook = Textbook(**textbook_data)
                 db.session.add(textbook)

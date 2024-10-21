@@ -57,7 +57,7 @@ class User(db.Model, SerializerMixin, UserMixin):
 class Textbook(db.Model, SerializerMixin):
     __tablename__ = "textbooks"
 
-    serialize_only = ('id', 'author', 'title', 'isbn')
+    serialize_only = ('id', 'author', 'title', 'isbn', 'subject')
 
     id = db.Column(Integer, primary_key=True)
     author = db.Column(String)

@@ -62,6 +62,7 @@ function PostDetails() {
       )}
       <div className="post-details">
         <p>Author: {post.textbook.author}</p>
+        <p>Subject: {post.textbook.subject}</p>
         <p>ISBN: {post.textbook.isbn}</p>
         <p>Price: ${post.price}</p>
         <p>Condition: {post.condition}</p>
