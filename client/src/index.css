@@ -1043,3 +1043,95 @@ textarea::placeholder {
   color: #6c757d;
   font-size: 0.9rem;
 }
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Add new unified container class */
+.page-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Update post list styles */
+.post-list {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Update watchlist container styles */
+.watchlist-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Update the my-posts styles */
+.my-posts {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+/* Update heading styles for consistency */
+.page-title {
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 30px;
+  color: #343a40;
+}
+
+/* Ensure post items have consistent width */
+.post-item {
+  width: 100%;
+  margin-bottom: 24px;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Media queries for responsive design */
+@media (max-width: 850px) {
+  .page-container {
+    padding: 15px;
+  }
+  
+  .post-list,
+  .watchlist-container {
+    padding: 0 15px;
+  }
+}
+.action-button.edit-post {
+  background-color: #6c757d;
+}
+
+.action-button.edit-post:hover {
+  background-color: #5a6268;
+}
+
+.action-button.delete-post {
+  background-color: #dc3545;
+}
+
+.action-button.delete-post:hover {
+  background-color: #c82333;
+}
+
+/* Adjust action group for multiple buttons */
+.action-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .action-group {
+    grid-template-columns: 1fr;
+  }
+}

@@ -64,17 +64,14 @@ function MyPosts() {
   }
 
   return (
-    <div>
-      
-    <div>
-      <h2 className='my-posts'>My Posts</h2>
+    <div className="page-container">
+      <h2 className="page-title">My Posts</h2>
       {editingPost ? (
         <EditPostForm
           post={editingPost}
           onUpdatePost={handleUpdatePost}
           onCancel={() => setEditingPost(null)}
         />
-        
       ) : (
         <PostList
           posts={myPosts}
@@ -86,8 +83,6 @@ function MyPosts() {
         />
       )}
     </div>
-    </div>
-  );
-}
+  );}
 
 export default MyPosts;

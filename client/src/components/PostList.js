@@ -65,18 +65,41 @@ function PostList({ posts, onEditPost, onDeletePost, showEditButton, onAddToWatc
                         </Link>
                         
                         {user && (
-                          <button 
-                            className={`action-button ${
-                              watchlistPosts.some(watchlistPost => watchlistPost.id === post.id)
-                                ? 'remove-watchlist'
-                                : 'add-watchlist'
-                            }`}
-                            onClick={() => handleWatchlistClick(post.id, post.textbook.id)}
-                          >
-                            {watchlistPosts.some(watchlistPost => watchlistPost.id === post.id)
-                              ? 'Remove from Watchlist'
-                              : 'Add to Watchlist'}
-                          </button>
+                          <>
+                            <button 
+                              className={`action-button ${
+                                watchlistPosts.some(watchlistPost => watchlistPost.id === post.id)
+                                  ? 'remove-watchlist'
+                                  : 'add-watchlist'
+                              }`}
+                              onClick={() => handleWatchlistClick(post.id, post.textbook.id)}
+                            >
+                              {watchlistPosts.some(watchlistPost => watchlistPost.id === post.id)
+                                ? 'Remove from Watchlist'
+                                : 'Add to Watchlist'}
+                            </button>
+
+                            {showEditButton && user.id === post.user.id && (
+                              <>
+                                <button
+                                  className="action-button edit-post"
+                                  onClick={() => onEditPost(post)}
+                                >
+                                  Edit Post
+                                </button>
+                                <button
+                                  className="action-button delete-post"
+                                  onClick={() => {
+                                    if (window.confirm('Are you sure you want to delete this post?')) {
+                                      onDeletePost(post.id);
+                                    }
+                                  }}
+                                >
+                                  Delete Post
+                                </button>
+                              </>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
