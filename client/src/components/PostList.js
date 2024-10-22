@@ -2,7 +2,6 @@ import React, { useContext } from "react";
 import { Link } from "react-router-dom";
 import { UserContext } from "../contexts/UserContext";
 import { PostContext } from "../contexts/PostContext";
-import "../index.css";
 
 function PostList({ posts, onEditPost, onDeletePost, showEditButton, onAddToWatchlist, onRemoveFromWatchlist }) {
   const { user, watchlistPosts } = useContext(UserContext);
@@ -26,44 +25,64 @@ function PostList({ posts, onEditPost, onDeletePost, showEditButton, onAddToWatc
         <ul>
           {posts.map((post) => (
             <li key={post.id} className="post-item">
-              <div className="post-header">
-                <p className="posted-by">Posted by: {post.user.email}</p>
-              </div>
-              <h3 className="post-title">{post.textbook.title}</h3>
-              {post.image_url && (
-                <div className="post-image-container">
-                  <img
-                    src={post.image_url}
-                    alt={post.textbook.title}
-                    className="post-image"
-                  />
+              <div className="post-container">
+                <div className="post-header">
+                  <span className="post-author">Posted by: {post.user.email}</span>
                 </div>
-              )}
-              <div className="post-details">
-                <p>Author: {post.textbook.author}</p>
-                <p>ISBN: {post.textbook.isbn}</p>
-                <p>Price: ${post.price}</p>
-                <p>Condition: {post.condition}</p>
+
+                <div className="post-main-content">
+                  <div className="post-left-column">
+                    {post.image_url && (
+                      <img
+                        src={post.image_url}
+                        alt={post.textbook.title}
+                        className="post-image"
+                      />
+                    )}
+                  </div>
+
+                  <div className="post-right-column">
+                    <div className="book-details-section">
+                      <h3 className="book-title">{post.textbook.title}</h3>
+                      
+                      <div className="book-details">
+                        <div className="book-meta">
+                          <p className="detail-item"><span className="label">Author:</span> {post.textbook.author}</p>
+                          <p className="detail-item"><span className="label">ISBN:</span> {post.textbook.isbn}</p>
+                          <p className="detail-item price"><span className="label">Price:</span> <span className="amount">${post.price}</span></p>
+                        </div>
+                        <div className="condition">
+                          <span className="condition-label">Condition:</span>
+                          <span className="condition-value">{post.condition}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="post-actions">
+                      <div className="action-group">
+                        <Link to={`/posts/${post.id}`} className="action-button view-details">
+                          View Details
+                        </Link>
+                        
+                        {user && (
+                          <button 
+                            className={`action-button ${
+                              watchlistPosts.some(watchlistPost => watchlistPost.id === post.id)
+                                ? 'remove-watchlist'
+                                : 'add-watchlist'
+                            }`}
+                            onClick={() => handleWatchlistClick(post.id, post.textbook.id)}
+                          >
+                            {watchlistPosts.some(watchlistPost => watchlistPost.id === post.id)
+                              ? 'Remove from Watchlist'
+                              : 'Add to Watchlist'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              {post.id && (
-                <Link to={`/posts/${post.id}`} className="btn btn-secondary">
-                  View Details
-                </Link>
-              )}
-              {showEditButton && user && post.user.id === user.id && (
-                <>
-                  <button className="btn btn-secondary" onClick={() => onEditPost(post)}>Edit</button>
-                  <button className="btn btn-danger" onClick={() => onDeletePost(post.id)}>Delete</button>
-                </>
-              )}
-              {user && (
-                <button 
-                  className={watchlistPosts.some(watchlistPost => watchlistPost.id === post.id) ? "btn btn-danger" : "btn btn-success"}
-                  onClick={() => handleWatchlistClick(post.id, post.textbook.id)}
-                >
-                  {watchlistPosts.some(watchlistPost => watchlistPost.id === post.id) ? "Remove from Watchlist" : "Add to Watchlist"}
-                </button>
-              )}
             </li>
           ))}
         </ul>
