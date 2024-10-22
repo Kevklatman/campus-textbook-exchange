@@ -12,38 +12,94 @@ const Watchlist = () => {
   }, [user, fetchWatchlist]);
 
   if (!user) {
-    return <div>Please log in to view your watchlist.</div>;
+    return (
+      <div className="login-prompt-container">
+        <p>Please log in to view your watchlist.</p>
+      </div>
+    );
   }
 
   if (!Array.isArray(watchlistPosts) || watchlistPosts.length === 0) {
-    return <div>Your watchlist is empty.</div>;
+    return (
+      <div className="watchlist-container">
+        <h2 className="post-details-title text-center">Watchlist</h2>
+        <div className="login-prompt-container">
+          <p>Your watchlist is empty.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div><h2 className="my-posts">Watchlist</h2>
     <div className="watchlist-container">
+      <h2 className="post-details-title text-center">Watchlist</h2>
       
       {watchlistPosts.map((item) => (
-        <div key={item.id} className="watchlist-item">
-          <h3>{item.textbook?.title}</h3>
-          {item.image_url && (
-            <div className="watchlist-image-container">
-              <img src={item.image_url} alt={item.textbook?.title} className="watchlist-image" />
+        <div key={item.id} className="post-item">
+          <div className="post-container">
+            <div className="post-header">
+              <span className="post-author">Added to Watchlist</span>
             </div>
-          )}
-          <div className="watchlist-details">
-            <p>Author: {item.textbook?.author}</p>
-            <p>ISBN: {item.textbook?.isbn}</p>
-            <p>Price: ${item.price}</p>
-            <p>Condition: {item.condition}</p>
-          </div>
-          <div className="watchlist-actions">
-            <Link to={`/posts/${item.id}`} className="btn btn-secondary">View Details</Link>
-            <button onClick={() => removeFromWatchlist(item.id)} className="btn btn-danger">Remove from Watchlist</button>
+
+            <div className="post-main-content">
+              <div className="post-left-column">
+                {item.image_url && (
+                  <img 
+                    src={item.image_url} 
+                    alt={item.textbook?.title} 
+                    className="post-image"
+                  />
+                )}
+              </div>
+
+              <div className="post-right-column">
+                <div className="book-details-section">
+                  <h3 className="book-title">{item.textbook?.title}</h3>
+                  
+                  <div className="book-details">
+                    <div className="book-meta">
+                      <p className="detail-item">
+                        <span className="label">Author:</span>
+                        <span>{item.textbook?.author}</span>
+                      </p>
+                      <p className="detail-item">
+                        <span className="label">ISBN:</span>
+                        <span>{item.textbook?.isbn}</span>
+                      </p>
+                      <p className="detail-item">
+                        <span className="label">Price:</span>
+                        <span className="amount">${item.price}</span>
+                      </p>
+                      <div className="condition">
+                        <span className="condition-label">Condition:</span>
+                        <span className="condition-value">{item.condition}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="post-actions">
+                  <div className="action-group">
+                    <Link 
+                      to={`/posts/${item.id}`} 
+                      className="action-button view-details"
+                    >
+                      View Details
+                    </Link>
+                    <button 
+                      onClick={() => removeFromWatchlist(item.id)} 
+                      className="action-button remove-watchlist"
+                    >
+                      Remove from Watchlist
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       ))}
-    </div></div>
+    </div>
   );
 };
 
