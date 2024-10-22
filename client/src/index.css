@@ -441,3 +441,49 @@ textarea:focus {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+.textbook-selector {
+  background-color: #fff;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.textbook-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+
+.textbook-item {
+  border: 1px solid #e9ecef;
+  margin-bottom: 8px;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.textbook-item:hover {
+  background-color: #f8f9fa;
+}
+
+.textbook-item h4 {
+  margin: 0;
+  color: #343a40;
+}
+
+.textbook-item p {
+  margin: 5px 0 0;
+  color: #6c757d;
+}
+
+.text-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 16px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  margin-top: 5px;
+}

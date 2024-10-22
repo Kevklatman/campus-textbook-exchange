@@ -1,8 +1,10 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { PostContext } from '../contexts/PostContext';
+import TextbookSelector from '../components/TextbookSelector';
 
 function CreatePost({ onNewPostCreated }) {
+  const [showSelector, setShowSelector] = useState(false);
   const [author, setAuthor] = useState('');
   const [title, setTitle] = useState('');
   const [isbn, setIsbn] = useState('');
@@ -15,7 +17,6 @@ function CreatePost({ onNewPostCreated }) {
   const { addPost } = useContext(PostContext);
 
   useEffect(() => {
-    // Load the Cloudinary widget script
     const script = document.createElement('script');
     script.src = 'https://widget.cloudinary.com/v2.0/global/all.js';
     script.async = true;
@@ -25,6 +26,20 @@ function CreatePost({ onNewPostCreated }) {
       document.body.removeChild(script);
     };
   }, []);
+
+  const handleTextbookSelect = (textbook) => {
+    setAuthor(textbook.author);
+    setTitle(textbook.title);
+    setIsbn(textbook.isbn.toString());
+    setShowSelector(false);
+    // Clear any existing errors for these fields
+    setErrors(prev => ({
+      ...prev,
+      author: null,
+      title: null,
+      isbn: null
+    }));
+  };
 
   const handleImageUpload = () => {
     if (window.cloudinary) {
@@ -50,11 +65,7 @@ function CreatePost({ onNewPostCreated }) {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrors({});
-    setSuccessMessage('');
-
+  const validateForm = () => {
     const validationErrors = {};
     if (!author) validationErrors.author = 'Author is required';
     if (!title) validationErrors.title = 'Title is required';
@@ -65,7 +76,15 @@ function CreatePost({ onNewPostCreated }) {
     }
     if (!price) validationErrors.price = 'Price is required';
     if (!condition) validationErrors.condition = 'Condition is required';
+    return validationErrors;
+  };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrors({});
+    setSuccessMessage('');
+
+    const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
@@ -78,7 +97,9 @@ function CreatePost({ onNewPostCreated }) {
     formData.append('price', price);
     formData.append('condition', condition);
     formData.append('user_id', user.id);
-    formData.append('image_public_id', imageUrl);
+    if (imageUrl) {
+      formData.append('image_public_id', imageUrl);
+    }
 
     try {
       const response = await fetch('/posts', {
@@ -99,6 +120,7 @@ function CreatePost({ onNewPostCreated }) {
         setCondition('');
         setImageUrl('');
         setErrors({});
+        setShowSelector(false);
 
         setSuccessMessage('Post created successfully!');
         onNewPostCreated();
@@ -109,14 +131,36 @@ function CreatePost({ onNewPostCreated }) {
       }
     } catch (error) {
       console.error('Error creating post:', error);
+      setErrors({ submit: 'An error occurred while creating the post. Please try again.' });
       setSuccessMessage('');
     }
   };
 
+  const conditionOptions = ['New', 'Like New', 'Very Good', 'Good', 'Acceptable'];
+
   return (
+    <div>
+      <h2>Create Post</h2>
     <div className="create-post-form">
+      <div className="mb-4">
+        <button 
+          type="button"
+          className="btn btn-secondary" 
+          onClick={() => setShowSelector(!showSelector)}
+        >
+          {showSelector ? 'Hide Textbook Selector' : 'Select Existing Textbook'}
+        </button>
+      </div>
+
+      {showSelector && (
+        <div className="mb-4">
+          <TextbookSelector onSelect={handleTextbookSelect} />
+        </div>
+      )}
+
       {successMessage && <div className="success-message">{successMessage}</div>}
       {errors.submit && <div className="error-message">{errors.submit}</div>}
+      
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="author">Author:</label>
@@ -130,6 +174,7 @@ function CreatePost({ onNewPostCreated }) {
           />
           {errors.author && <span className="error">{errors.author}</span>}
         </div>
+
         <div className="form-group">
           <label htmlFor="title">Title:</label>
           <input
@@ -142,6 +187,7 @@ function CreatePost({ onNewPostCreated }) {
           />
           {errors.title && <span className="error">{errors.title}</span>}
         </div>
+
         <div className="form-group">
           <label htmlFor="isbn">ISBN:</label>
           <input
@@ -154,6 +200,7 @@ function CreatePost({ onNewPostCreated }) {
           />
           {errors.isbn && <span className="error">{errors.isbn}</span>}
         </div>
+
         <div className="form-group">
           <label htmlFor="price">Price:</label>
           <input
@@ -166,18 +213,24 @@ function CreatePost({ onNewPostCreated }) {
           />
           {errors.price && <span className="error">{errors.price}</span>}
         </div>
+
         <div className="form-group">
           <label htmlFor="condition">Condition:</label>
-          <input
-            type="text"
+          <select
             id="condition"
             value={condition}
             onChange={(e) => setCondition(e.target.value)}
             aria-required="true"
             aria-invalid={errors.condition ? 'true' : 'false'}
-          />
+          >
+            <option value="">Select condition</option>
+            {conditionOptions.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
           {errors.condition && <span className="error">{errors.condition}</span>}
         </div>
+
         <div className="form-group">
           <button type="button" onClick={handleImageUpload} className="btn btn-secondary">
             {imageUrl ? 'Change Image' : 'Upload Image'}
@@ -191,8 +244,10 @@ function CreatePost({ onNewPostCreated }) {
           )}
           {errors.image && <span className="error">{errors.image}</span>}
         </div>
+
         <button type="submit" className="btn btn-success">Create Post</button>
       </form>
+    </div>
     </div>
   );
 }
