@@ -1,4 +1,3 @@
-// src/components/App.js
 import React from "react";
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 import Navbar from "./NavBar";
@@ -6,7 +5,7 @@ import LoginAndRegister from "../pages/LoginAndRegister";
 import { UserProvider } from "../contexts/UserContext";
 import { PostProvider } from "../contexts/PostContext";
 import Home from "../pages/Home";
-import CreatePost from "./CreatePost";
+import CreatePostPage from "../pages/CreatePostPage";  // Changed this import
 import MyPosts from "../pages/MyPosts";
 import PostDetails from "../pages/PostDetails";
 import Watchlist from "../pages/Watchlist";
@@ -22,7 +21,7 @@ function App() {
             <Switch>
               <Route exact path="/" component={Home} />
               <Route path="/login" component={LoginAndRegister} />
-              <Route path="/create-post" component={CreatePost} />
+              <Route path="/create-post" component={CreatePostPage} />  {/* Changed this line */}
               <Route path="/my-posts" component={MyPosts} />
               <Route path="/posts/:postId" component={PostDetails} />
               <Route path="/watchlist" component={Watchlist} />

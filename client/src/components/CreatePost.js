@@ -1,21 +1,25 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { PostContext } from '../contexts/PostContext';
-import TextbookSelector from '../components/TextbookSelector';
+import TextbookSelector from './TextbookSelector';
 
 function CreatePost({ onNewPostCreated }) {
+  const { user } = useContext(UserContext);
+  const { addPost } = useContext(PostContext);
+  
+  // Form state
   const [showSelector, setShowSelector] = useState(false);
   const [author, setAuthor] = useState('');
   const [title, setTitle] = useState('');
   const [isbn, setIsbn] = useState('');
+  const [subject, setSubject] = useState('');
   const [price, setPrice] = useState('');
   const [condition, setCondition] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
-  const { user } = useContext(UserContext);
-  const { addPost } = useContext(PostContext);
 
+  // Load Cloudinary widget
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://widget.cloudinary.com/v2.0/global/all.js';
@@ -27,17 +31,40 @@ function CreatePost({ onNewPostCreated }) {
     };
   }, []);
 
+  const subjectOptions = [
+    'Mathematics',
+    'Computer Science',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'Economics',
+    'Psychology',
+    'Other'
+  ];
+
+  const conditionOptions = [
+    'New',
+    'Like New',
+    'Very Good',
+    'Good',
+    'Acceptable'
+  ];
+
   const handleTextbookSelect = (textbook) => {
     setAuthor(textbook.author);
     setTitle(textbook.title);
     setIsbn(textbook.isbn.toString());
+    if (textbook.subject) {
+      setSubject(textbook.subject);
+    }
     setShowSelector(false);
     // Clear any existing errors for these fields
     setErrors(prev => ({
       ...prev,
       author: null,
       title: null,
-      isbn: null
+      isbn: null,
+      subject: null
     }));
   };
 
@@ -50,7 +77,6 @@ function CreatePost({ onNewPostCreated }) {
         },
         (error, result) => {
           if (!error && result && result.event === "success") {
-            console.log('Done! Here is the image info: ', result.info);
             setImageUrl(result.info.public_id);
             setErrors(prevErrors => ({ ...prevErrors, image: null }));
           } else if (error) {
@@ -69,13 +95,19 @@ function CreatePost({ onNewPostCreated }) {
     const validationErrors = {};
     if (!author) validationErrors.author = 'Author is required';
     if (!title) validationErrors.title = 'Title is required';
+    if (!subject) validationErrors.subject = 'Subject is required';
     if (!isbn) {
       validationErrors.isbn = 'ISBN is required';
     } else if (!/^\d{13}$/.test(isbn)) {
       validationErrors.isbn = 'ISBN must be a 13-digit number';
     }
-    if (!price) validationErrors.price = 'Price is required';
+    if (!price) {
+      validationErrors.price = 'Price is required';
+    } else if (isNaN(price) || price <= 0) {
+      validationErrors.price = 'Price must be a positive number';
+    }
     if (!condition) validationErrors.condition = 'Condition is required';
+    
     return validationErrors;
   };
 
@@ -94,6 +126,7 @@ function CreatePost({ onNewPostCreated }) {
     formData.append('author', author);
     formData.append('title', title);
     formData.append('isbn', isbn);
+    formData.append('subject', subject);
     formData.append('price', price);
     formData.append('condition', condition);
     formData.append('user_id', user.id);
@@ -116,6 +149,7 @@ function CreatePost({ onNewPostCreated }) {
         setAuthor('');
         setTitle('');
         setIsbn('');
+        setSubject('');
         setPrice('');
         setCondition('');
         setImageUrl('');
@@ -123,23 +157,20 @@ function CreatePost({ onNewPostCreated }) {
         setShowSelector(false);
 
         setSuccessMessage('Post created successfully!');
-        onNewPostCreated();
+        if (onNewPostCreated) {
+          onNewPostCreated();
+        }
       } else {
         console.error('Failed to create post:', data);
         setErrors({ submit: data.message || 'Failed to create post. Please try again.' });
-        setSuccessMessage('');
       }
     } catch (error) {
       console.error('Error creating post:', error);
       setErrors({ submit: 'An error occurred while creating the post. Please try again.' });
-      setSuccessMessage('');
     }
   };
 
-  const conditionOptions = ['New', 'Like New', 'Very Good', 'Good', 'Acceptable'];
-
   return (
-    <div>
     <div className="create-post-form">
       <div className="mb-4">
         <button 
@@ -157,23 +188,19 @@ function CreatePost({ onNewPostCreated }) {
         </div>
       )}
 
-      {successMessage && <div className="success-message">{successMessage}</div>}
-      {errors.submit && <div className="error-message">{errors.submit}</div>}
-      
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="author">Author:</label>
-          <input
-            type="text"
-            id="author"
-            value={author}
-            onChange={(e) => setAuthor(e.target.value)}
-            aria-required="true"
-            aria-invalid={errors.author ? 'true' : 'false'}
-          />
-          {errors.author && <span className="error">{errors.author}</span>}
+      {successMessage && (
+        <div className="success-message">
+          {successMessage}
         </div>
+      )}
+      
+      {errors.submit && (
+        <div className="error-message">
+          {errors.submit}
+        </div>
+      )}
 
+      <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="title">Title:</label>
           <input
@@ -188,6 +215,19 @@ function CreatePost({ onNewPostCreated }) {
         </div>
 
         <div className="form-group">
+          <label htmlFor="author">Author:</label>
+          <input
+            type="text"
+            id="author"
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+            aria-required="true"
+            aria-invalid={errors.author ? 'true' : 'false'}
+          />
+          {errors.author && <span className="error">{errors.author}</span>}
+        </div>
+
+        <div className="form-group">
           <label htmlFor="isbn">ISBN:</label>
           <input
             type="text"
@@ -196,8 +236,26 @@ function CreatePost({ onNewPostCreated }) {
             onChange={(e) => setIsbn(e.target.value)}
             aria-required="true"
             aria-invalid={errors.isbn ? 'true' : 'false'}
+            placeholder="Enter 13-digit ISBN"
           />
           {errors.isbn && <span className="error">{errors.isbn}</span>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="subject">Subject:</label>
+          <select
+            id="subject"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            aria-required="true"
+            aria-invalid={errors.subject ? 'true' : 'false'}
+          >
+            <option value="">Select subject</option>
+            {subjectOptions.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+          {errors.subject && <span className="error">{errors.subject}</span>}
         </div>
 
         <div className="form-group">
@@ -209,6 +267,8 @@ function CreatePost({ onNewPostCreated }) {
             onChange={(e) => setPrice(e.target.value)}
             aria-required="true"
             aria-invalid={errors.price ? 'true' : 'false'}
+            min="0"
+            step="0.01"
           />
           {errors.price && <span className="error">{errors.price}</span>}
         </div>
@@ -235,18 +295,18 @@ function CreatePost({ onNewPostCreated }) {
             {imageUrl ? 'Change Image' : 'Upload Image'}
           </button>
           {imageUrl && (
-            <img 
-              src={`https://res.cloudinary.com/duhjluee1/image/upload/${imageUrl}`} 
-              alt="Uploaded" 
-              style={{ maxWidth: '200px', marginTop: '10px' }} 
-            />
+            <div className="image-preview">
+              <img 
+                src={`https://res.cloudinary.com/duhjluee1/image/upload/${imageUrl}`} 
+                alt="Uploaded textbook" 
+              />
+            </div>
           )}
           {errors.image && <span className="error">{errors.image}</span>}
         </div>
 
         <button type="submit" className="btn btn-success">Create Post</button>
       </form>
-    </div>
     </div>
   );
 }

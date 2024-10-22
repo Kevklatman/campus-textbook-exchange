@@ -4,16 +4,22 @@ const TextbookSelector = ({ onSelect }) => {
   const [textbooks, setTextbooks] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredTextbooks, setFilteredTextbooks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Fetch textbooks when component mounts
     fetch('/textbooks')
       .then(res => res.json())
       .then(data => {
         setTextbooks(data);
         setFilteredTextbooks(data);
+        setLoading(false);
       })
-      .catch(error => console.error('Error fetching textbooks:', error));
+      .catch(error => {
+        console.error('Error fetching textbooks:', error);
+        setError('Failed to load textbooks. Please try again later.');
+        setLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -25,6 +31,14 @@ const TextbookSelector = ({ onSelect }) => {
     setFilteredTextbooks(filtered);
   }, [searchTerm, textbooks]);
 
+  if (loading) {
+    return <div className="textbook-selector">Loading textbooks...</div>;
+  }
+
+  if (error) {
+    return <div className="textbook-selector error-message">{error}</div>;
+  }
+
   return (
     <div className="textbook-selector">
       <div className="form-group">
@@ -35,21 +49,29 @@ const TextbookSelector = ({ onSelect }) => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search by title, author, or ISBN..."
-          className="text-input"
+          className="form-control"
         />
       </div>
+      
       <div className="textbook-list">
-        {filteredTextbooks.map(book => (
-          <div 
-            key={book.id} 
-            className="textbook-item hover:bg-gray-100 p-2 cursor-pointer rounded"
-            onClick={() => onSelect(book)}
-          >
-            <h4 className="font-semibold">{book.title}</h4>
-            <p className="text-sm text-gray-600">By: {book.author}</p>
-            <p className="text-sm text-gray-600">ISBN: {book.isbn}</p>
+        {filteredTextbooks.length > 0 ? (
+          filteredTextbooks.map(book => (
+            <div 
+              key={book.id} 
+              className="textbook-item"
+              onClick={() => onSelect(book)}
+            >
+              <h4>{book.title}</h4>
+              <p>By: {book.author}</p>
+              <p>ISBN: {book.isbn}</p>
+              {book.subject && <p>Subject: {book.subject}</p>}
+            </div>
+          ))
+        ) : (
+          <div className="textbook-item">
+            <p>No textbooks found matching your search.</p>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
