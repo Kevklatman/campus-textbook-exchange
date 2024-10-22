@@ -23,7 +23,6 @@ class User(db.Model, SerializerMixin, UserMixin):
     comments = relationship('Comment', back_populates='user', cascade="all, delete-orphan")
     watchlists = relationship('Watchlist', back_populates='user', cascade="all, delete-orphan")
 
-    # Define a relationship to Textbook through Post
     textbooks = relationship('Textbook', secondary='posts', viewonly=True)
 
     def __repr__(self):

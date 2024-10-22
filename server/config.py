@@ -53,7 +53,6 @@ app.config['MAIL_USERNAME'] = ('campustextbookexchange@gmail.com')
 app.config['MAIL_PASSWORD'] = ('bkrb couo vrqn gdsq')  #from kevin to kevin, remember to update this when running/ demonstrating app
 app.config['MAIL_DEFAULT_SENDER'] = ('campustextbookexchange@gmail.com')  
 
-# Instantiate Flask-Mail
 mail = Mail(app)
 
 app.secret_key = 'your_secret_key_here'

@@ -54,7 +54,6 @@ export function UserProvider({ children }) {
         if (res.ok) {
           setUser(null);
           setWatchlistPosts([]);
-          // Redirect the user to the login page or any other appropriate page
           window.location.href = '/login';
         } else {
           throw new Error('Logout failed');

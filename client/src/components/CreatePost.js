@@ -55,7 +55,6 @@ function CreatePost({ onNewPostCreated }) {
     setErrors({});
     setSuccessMessage('');
 
-    // Perform form validation
     const validationErrors = {};
     if (!author) validationErrors.author = 'Author is required';
     if (!title) validationErrors.title = 'Title is required';

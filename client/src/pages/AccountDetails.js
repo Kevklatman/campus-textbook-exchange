@@ -12,7 +12,6 @@ function AccountDetails() {
       try {
         await axios.delete(`/users/${user.id}`);
         setUser(null);
-        // Redirect the user to the login page or any other appropriate page
         window.location.href = '/login';
       } catch (error) {
         console.error('Error deleting account:', error);
@@ -27,7 +26,6 @@ function AccountDetails() {
         <div>
           <p>Email: {user.email}</p>
           <p>Name: {user.name}</p>
-          {/* Add more account details as needed */}
           <button className="delete-account-button" onClick={handleDeleteAccount}>
             Delete Account
           </button>

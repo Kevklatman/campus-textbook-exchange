@@ -117,7 +117,6 @@ TEXTBOOK_COVER_FALLBACKS = {
     ]
 }
 
-# Simplified subject list to match our available covers
 SUBJECTS = list(TEXTBOOK_COVERS.keys())
 
 FAKE_UNIVERSITIES = [
