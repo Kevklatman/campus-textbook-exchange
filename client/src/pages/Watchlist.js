@@ -20,8 +20,9 @@ const Watchlist = () => {
   }
 
   return (
+    <div><h2 className="my-posts">Watchlist</h2>
     <div className="watchlist-container">
-      <h2>Watchlist</h2>
+      
       {watchlistPosts.map((item) => (
         <div key={item.id} className="watchlist-item">
           <h3>{item.textbook?.title}</h3>
@@ -42,7 +43,7 @@ const Watchlist = () => {
           </div>
         </div>
       ))}
-    </div>
+    </div></div>
   );
 };
 

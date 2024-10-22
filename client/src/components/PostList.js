@@ -22,7 +22,6 @@ function PostList({ posts, onEditPost, onDeletePost, showEditButton, onAddToWatc
 
   return (
     <div className="post-list">
-      <h2>Posts</h2>
       {posts.length > 0 ? (
         <ul>
           {posts.map((post) => (

@@ -140,7 +140,6 @@ function CreatePost({ onNewPostCreated }) {
 
   return (
     <div>
-      <h2>Create Post</h2>
     <div className="create-post-form">
       <div className="mb-4">
         <button 

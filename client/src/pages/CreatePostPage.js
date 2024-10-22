@@ -11,6 +11,7 @@ function CreatePostPage() {
   };
 
   return (
+    
     <div className="create-post-page">
       <div className="container">
         <h2 className="create-post-title">Create Post</h2>

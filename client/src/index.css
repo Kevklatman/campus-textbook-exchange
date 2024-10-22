@@ -353,7 +353,7 @@ textarea:focus {
   font-weight: bold;
   margin-bottom: 30px;
   color: #343a40;
-  text-align: left;
+  text-align: center;
 }
 
 .watchlist-item {
@@ -486,4 +486,7 @@ textarea:focus {
   border: 1px solid #ced4da;
   border-radius: 4px;
   margin-top: 5px;
+}
+.my-posts{
+  text-align: center;
 }

@@ -65,12 +65,16 @@ function MyPosts() {
 
   return (
     <div>
+      
+    <div>
+      <h2 className='my-posts'>My Posts</h2>
       {editingPost ? (
         <EditPostForm
           post={editingPost}
           onUpdatePost={handleUpdatePost}
           onCancel={() => setEditingPost(null)}
         />
+        
       ) : (
         <PostList
           posts={myPosts}
@@ -81,6 +85,7 @@ function MyPosts() {
           showEditButton={true}
         />
       )}
+    </div>
     </div>
   );
 }
