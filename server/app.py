@@ -5,7 +5,6 @@ from config import *
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_uploads import configure_uploads, UploadNotAllowed
-import logging
 from flask_mail import Message
 import logging
 from cloudinary.uploader import upload
