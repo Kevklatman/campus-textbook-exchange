@@ -124,6 +124,7 @@ a:hover {
   background-color: #218838;
 }
 
+/* Form styles */
 .form-group {
   margin-bottom: 24px;
   width: 100%;
@@ -156,7 +157,6 @@ select {
   background-color: white;
 }
 
-/* Style the select dropdown arrow */
 select {
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
@@ -165,13 +165,11 @@ select {
   padding-right: 40px;
 }
 
-/* Remove default focus style for Firefox */
 select:-moz-focusring {
   color: transparent;
   text-shadow: 0 0 0 #000;
 }
 
-/* Adjust textarea height */
 textarea {
   height: auto;
   min-height: 100px;
@@ -186,20 +184,11 @@ select:focus {
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-/* Style placeholder text */
 input::placeholder,
 select::placeholder,
 textarea::placeholder {
   color: #6c757d;
   opacity: 0.7;
-}
-
-/* Create Post specific form styles */
-.create-post-form input,
-.create-post-form select,
-.create-post-form textarea {
-  width: 100%;
-  margin-bottom: 0;
 }
 
 /* Message styles */
@@ -233,8 +222,8 @@ textarea::placeholder {
   padding: 20px;
   background-color: #f8f9fa;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: relative;  /* Add this */
-  z-index: 1000;      /* Increase this */
+  position: relative;
+  z-index: 1000;
 }
 
 .navbar-left {
@@ -346,24 +335,111 @@ textarea::placeholder {
 /* Comment Section styles */
 .comment-section {
   margin-top: 40px;
+  border-top: 1px solid #e9ecef;
+  padding-top: 30px;
+}
+
+.comment-section h3 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  color: #343a40;
 }
 
 .comment-list {
   list-style-type: none;
   padding: 0;
+  margin: 0;
 }
 
 .comment-item {
   margin-bottom: 20px;
-  padding: 20px;
+  padding: 16px 20px;
   background-color: #f8f9fa;
-  border-radius: 6px;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+  transition: transform 0.2s ease;
 }
 
-.comment-item p {
-  font-size: 16px;
-  margin-bottom: 10px;
+.comment-item:hover {
+  transform: translateX(5px);
+  border-left: 3px solid #007bff;
+}
+
+.comment-header {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.comment-author {
+  font-weight: 600;
+  color: #343a40;
+  margin-bottom: 4px;
+}
+
+.comment-date {
+  font-size: 12px;
+  color: #adb5bd;
+  font-weight: 400;
+}
+
+.comment-content {
   color: #495057;
+  line-height: 1.5;
+  margin: 0;
+  font-size: 15px;
+}
+
+.new-comment {
+  margin-top: 30px;
+}
+
+.new-comment textarea {
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  border: 1px solid #ced4da;
+  border-radius: 12px;
+  resize: vertical;
+  min-height: 100px;
+  margin-bottom: 16px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.new-comment textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.new-comment button {
+  float: right;
+}
+
+.new-comment::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+.no-comments {
+  text-align: center;
+  padding: 30px;
+  color: #6c757d;
+  font-style: italic;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.login-prompt {
+  text-align: center;
+  padding: 20px;
+  background-color: #e9ecef;
+  border-radius: 12px;
+  color: #495057;
+  margin-top: 20px;
 }
 
 /* Create Post styles */
@@ -372,13 +448,13 @@ textarea::placeholder {
   background-color: #f8f9fa;
   min-height: calc(100vh - 60px);
   position: relative;
-  z-index: 1;         
-  margin-top: -2px;  
+  z-index: 1;
+  margin-top: -2px;
 }
 
 .create-post-container {
-  position: relative;  
-  z-index: 2;         
+  position: relative;
+  z-index: 2;
   max-width: 800px;
   margin: 0 auto;
   background-color: #fff;
@@ -502,5 +578,63 @@ textarea::placeholder {
   .register-form {
     width: 100%;
     margin-bottom: 30px;
+  }
+
+  .navbar {
+    padding: 15px;
+  }
+
+  .navbar-link {
+    margin-right: 15px;
+    font-size: 14px;
+  }
+
+  .navbar-welcome {
+    font-size: 14px;
+  }
+
+  .post-image,
+  .watchlist-image {
+    max-width: 100%;
+  }
+
+  .comment-item {
+    padding: 12px 16px;
+  }
+
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-success,
+  .watchlist-button,
+  .delete-account-button,
+  .navbar-logout,
+  .view-details-link,
+  .remove-button {
+    padding: 6px 12px;
+    font-size: 14px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+  }
+
+  .textbook-list {
+    max-height: 250px;
+  }
+
+  h1 {
+    font-size: 28px;
+  }
+
+  h2 {
+    font-size: 24px;
+  }
+
+  h3 {
+    font-size: 20px;
+  }
+
+  p {
+    font-size: 16px;
   }
 }
