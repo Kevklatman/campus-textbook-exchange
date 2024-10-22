@@ -638,3 +638,20 @@ textarea::placeholder {
     font-size: 16px;
   }
 }
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.create-post-form .image-preview {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.create-post-form .image-preview img {
+  max-width: 200px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
