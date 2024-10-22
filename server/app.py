@@ -126,7 +126,6 @@ class PostResource(Resource):
             print(f"Post with id {post_id} not found")
             return {"message": "Post not found"}, 404
 
-        # Remove the current_user check for now, to match the post method
         if post.user_id != current_user.id:
             return {"message": "Unauthorized"}, 401
 
@@ -170,7 +169,7 @@ class PostResource(Resource):
                     user = User.query.get(item.user_id)
                     if user:
                         subject = f"Price Drop Alert: {post.textbook.title}"
-                        body = f"The price of {post.textbook.title} has dropped to {post.price}. Check it out now!"
+                        body = f"The price of {post.textbook.title} has dropped to ${post.price}. Check it out now!"
                         recipients = [user.email]
                         send_email(subject, recipients, body)
 
@@ -238,14 +237,12 @@ class TextbookResource(Resource):
 
         textbook = Textbook(author=author, title=title, isbn=isbn)
         
-        # Removed image handling from TextbookResource
 
         db.session.add(textbook)
         db.session.commit()
 
         return textbook.to_dict(), 201
 
-    # ... (rest of the TextbookResource remains the same)
 
     def delete(self, textbook_id):
         textbook = Textbook.query.get(textbook_id)
@@ -435,7 +432,6 @@ class SignupResource(Resource):
             logger.error(f"Error during user signup: {str(e)}")
             return {"message": f"An error occurred while creating the user: {str(e)}"}, 500
 
-# ... rest of the file ...
 
 class LoginResource(Resource):
     def post(self):
@@ -465,7 +461,6 @@ class LoginResource(Resource):
             return {"message": "Invalid email or password"}, 401
 
     def get(self):
-        # Handle potential CORS preflight requests
         return {'message': 'Login endpoint'}, 200
 
         
