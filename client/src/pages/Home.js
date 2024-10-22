@@ -50,13 +50,16 @@ function Home() {
     <div className="home-container">
       <h1>Campus Textbook Exchange</h1>
       {user ? (
-        <div>
-          <input
-            type="text"
-            placeholder="Search by author, title, or ISBN"
-            value={searchTerm}
-            onChange={handleSearchChange}
-          />
+        <div className="home-content">
+          <div className="search-container">
+            <input
+              type="text"
+              placeholder="Search by author, title, or ISBN"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="search-input"
+            />
+          </div>
           <PostList
             posts={filteredPosts}
             onAddToWatchlist={handleAddToWatchlist}
@@ -65,9 +68,9 @@ function Home() {
           />
         </div>
       ) : (
-        <div>
+        <div className="login-prompt-container">
           <p>Please log in or register to access all features.</p>
-          <Link to="/login">Login / Register</Link>
+          <Link to="/login" className="btn btn-primary">Login / Register</Link>
         </div>
       )}
     </div>
