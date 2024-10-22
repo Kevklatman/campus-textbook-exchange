@@ -1024,3 +1024,22 @@ textarea::placeholder {
     font-size: 16px;
   }
 }
+.post-details-header {
+  padding: 24px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  text-align: center;
+}
+
+.post-details-header .post-details-title {
+  margin-bottom: 12px;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.post-details-header .post-details-author {
+  display: block;
+  color: #6c757d;
+  font-size: 0.9rem;
+}

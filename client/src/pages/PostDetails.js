@@ -62,6 +62,7 @@ function PostDetails() {
   return (
     <div className="post-details-container">
       <div className="post-details-header">
+        <h2 className="post-details-title">{post.textbook.title}</h2>
         <span className="post-details-author">Posted by: {post.user.email}</span>
       </div>
 
@@ -77,8 +78,6 @@ function PostDetails() {
         )}
 
         <div className="post-details-info">
-          <h2 className="post-details-title">{post.textbook.title}</h2>
-          
           <div className="post-details-meta">
             <div className="post-details-row">
               <span className="post-details-label">Author</span>
