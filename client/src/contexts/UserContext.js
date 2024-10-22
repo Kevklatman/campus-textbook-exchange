@@ -48,21 +48,16 @@ export function UserProvider({ children }) {
     fetchWatchlist(userData.id);
   };
 
-  const logout = () => {
-    fetch("/logout", { method: "POST" })
-      .then((res) => {
-        if (res.ok) {
-          setUser(null);
-          setWatchlistPosts([]);
-          window.location.href = '/login';
-        } else {
-          throw new Error('Logout failed');
-        }
-      })
-      .catch((error) => {
-        console.error("Logout error:", error);
-      });
-  };
+const logout = async () => {
+  try {
+    await fetch("/logout", { method: "POST" });
+    setUser(null);
+    setWatchlistPosts([]);
+    // Clear any other user-related state here
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
+};
 
   const addToWatchlist = async (postId, textbookId) => {
     if (!user) return;
