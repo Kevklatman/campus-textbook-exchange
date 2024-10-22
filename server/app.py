@@ -303,6 +303,23 @@ class CommentResource(Resource):
         db.session.commit()
 
         return new_comment.to_dict(), 201
+    
+    def delete(self, post_id, comment_id):
+        comment = Comment.query.get(comment_id)
+        if not comment:
+            return {"message": "Comment not found"}, 404
+
+        # Check if the current user is the comment owner
+        if comment.user_id != current_user.id:
+            return {"message": "Unauthorized"}, 401
+
+        try:
+            db.session.delete(comment)
+            db.session.commit()
+            return {"message": "Comment deleted successfully"}, 200
+        except Exception as e:
+            db.session.rollback()
+            return {"message": "Error deleting comment", "error": str(e)}, 500
 
 class WatchlistResource(Resource):
     def get(self, user_id):
@@ -468,7 +485,9 @@ class LoginResource(Resource):
 
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
 api.add_resource(TextbookResource, '/textbooks', '/textbooks/<int:textbook_id>')
-api.add_resource(CommentResource, '/comments', '/posts/<int:post_id>/comments')
+api.add_resource(CommentResource, '/comments', 
+                '/posts/<int:post_id>/comments',
+                '/posts/<int:post_id>/comments/<int:comment_id>')
 api.add_resource(LoginResource, '/login')
 api.add_resource(LogoutResource, '/logout')
 api.add_resource(CheckSessionResource, '/check_session')

@@ -30,6 +30,13 @@ function PostDetails() {
 
   const handleCommentSubmit = async (commentText) => {
     try {
+      if (commentText === null) {
+        const commentsResponse = await fetch(`/posts/${postId}/comments`);
+        const updatedCommentsData = await commentsResponse.json();
+        setPost((prevPost) => ({ ...prevPost, comments: updatedCommentsData }));
+        return;
+      }
+  
       const response = await fetch(`/posts/${postId}/comments`, {
         method: 'POST',
         headers: {
@@ -37,14 +44,14 @@ function PostDetails() {
         },
         body: JSON.stringify({ text: commentText }),
       });
-
+  
       if (response.ok) {
         const updatedCommentsResponse = await fetch(`/posts/${postId}/comments`);
         const updatedCommentsData = await updatedCommentsResponse.json();
         setPost((prevPost) => ({ ...prevPost, comments: updatedCommentsData }));
       }
     } catch (error) {
-      console.error('Error submitting comment:', error);
+      console.error('Error with comment:', error);
     }
   };
 

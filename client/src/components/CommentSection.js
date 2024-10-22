@@ -16,6 +16,26 @@ function CommentSection({ comments, onCommentSubmit }) {
     }
   };
 
+  const handleDeleteComment = async (commentId) => {
+     {
+      try {
+        const response = await fetch(`/posts/${comments[0].post_id}/comments/${commentId}`, {
+          method: 'DELETE',
+        });
+
+        if (response.ok) {
+          // Trigger a refresh of the comments by calling onCommentSubmit with null
+          onCommentSubmit(null);
+        } else {
+          const data = await response.json();
+          console.error('Error deleting comment:', data.message);
+        }
+      } catch (error) {
+        console.error('Error deleting comment:', error);
+      }
+    }
+  };
+
   const formatDate = (dateString) => {
     const options = { 
       year: 'numeric', 
@@ -38,6 +58,14 @@ function CommentSection({ comments, onCommentSubmit }) {
               <div className="comment-header">
                 <span className="comment-author">{comment.user.email}</span>
                 <span className="comment-date">{formatDate(comment.created_at)}</span>
+                {user && user.id === comment.user.id && (
+                  <button 
+                    onClick={() => handleDeleteComment(comment.id)}
+                    className="btn btn-danger comment-delete-btn"
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
               <p className="comment-content">{comment.text}</p>
             </li>
