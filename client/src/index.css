@@ -533,11 +533,7 @@ textarea::placeholder {
   border-top: 1px solid #e9ecef;
 }
 
-.action-group {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-}
+
 
 .action-button {
   flex: 1;
@@ -965,9 +961,6 @@ textarea::placeholder {
     margin: 0 auto;
   }
 
-  .action-group {
-    flex-direction: column;
-  }
 
   .post-container {
     min-height: unset;
@@ -1126,12 +1119,15 @@ textarea::placeholder {
 /* Adjust action group for multiple buttons */
 .action-group {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: 1fr 1fr;  /* Creates two equal columns */
   gap: 8px;
+  width: 100%;
 }
 
+/* Keep the mobile layout as a single column */
 @media (max-width: 768px) {
   .action-group {
     grid-template-columns: 1fr;
   }
 }
+
