@@ -557,6 +557,16 @@ textarea::placeholder {
 
 .view-details:hover {
   background-color: #0056b3;
+  color: white;
+}
+
+a.action-button.view-details:hover {
+  color: white;
+  text-decoration: none;
+}
+
+.action-button:hover {
+  color: white;
 }
 
 .add-watchlist {
