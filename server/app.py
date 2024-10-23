@@ -168,13 +168,26 @@ class PostResource(Resource):
             if new_price < original_price:
                 watchlist_items = Watchlist.query.filter_by(post_id=post_id).all()
                 for item in watchlist_items:
-                    # Create notification for each user watching this post
+                    # First, check how many notifications the user has
+                    existing_notifications = Notification.query\
+                        .filter_by(user_id=item.user_id)\
+                        .order_by(Notification.created_at.desc())\
+                        .all()
+                    
+                    # Create the new notification
                     notification = Notification(
                         user_id=item.user_id,
                         post_id=post_id,
                         message=f"Price dropped for {post.textbook.title} from ${original_price:.2f} to ${new_price:.2f}!"
                     )
                     db.session.add(notification)
+                    
+                    # If we'll exceed the limit, remove the oldest notifications
+                    if len(existing_notifications) >= 3:  # Using 3 as the limit
+                        # Keep only the 2 most recent to make room for the new one
+                        notifications_to_delete = existing_notifications[2:]
+                        for old_notification in notifications_to_delete:
+                            db.session.delete(old_notification)
                     
                     # Also send email notification
                     user = User.query.get(item.user_id)
@@ -195,7 +208,7 @@ class PostResource(Resource):
 
             print("Returning updated post data:", post_data)
             return post_data, 200
-            
+                
         except Exception as e:
             db.session.rollback()
             print("Error updating post:", str(e))
@@ -503,10 +516,15 @@ class LoginResource(Resource):
         return {'message': 'Login endpoint'}, 200
     
 class NotificationResource(Resource):
+    MAX_NOTIFICATIONS = 3  # Class constant for max notifications
+
     def get(self, user_id=None):
         try:
-            notifications = Notification.query.filter_by(user_id=current_user.id)\
-                .order_by(Notification.created_at.desc()).all()
+            notifications = Notification.query\
+                .filter_by(user_id=current_user.id)\
+                .order_by(Notification.created_at.desc())\
+                .limit(self.MAX_NOTIFICATIONS)\
+                .all()
             return [notification.to_dict() for notification in notifications], 200
         except Exception as e:
             print(f"Error fetching notifications: {str(e)}")
@@ -514,15 +532,15 @@ class NotificationResource(Resource):
 
     def patch(self, user_id=None, notification_id=None):
         try:
-            # Handle mark-all-read case
             if user_id and not notification_id:
                 if user_id != current_user.id:
                     return {"message": "Unauthorized"}, 401
                 
-                notifications = Notification.query.filter_by(
-                    user_id=current_user.id,
-                    read=False
-                ).all()
+                notifications = Notification.query\
+                    .filter_by(user_id=current_user.id, read=False)\
+                    .order_by(Notification.created_at.desc())\
+                    .limit(self.MAX_NOTIFICATIONS)\
+                    .all()
                 
                 for notification in notifications:
                     notification.read = True

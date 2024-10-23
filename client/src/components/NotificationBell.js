@@ -3,7 +3,7 @@ import React, { useContext, useState } from 'react';
 import { UserContext } from '../contexts/UserContext';
 
 const NotificationBell = () => {
-  const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useContext(UserContext);
+  const { notifications, markAllNotificationsAsRead } = useContext(UserContext);
   const [showNotifications, setShowNotifications] = useState(false);
 
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
@@ -15,9 +15,9 @@ const NotificationBell = () => {
     }
   };
 
-  const handleNotificationClick = (notification) => {
-    console.log('Notification clicked:', notification);
-  };
+  const sortedNotifications = notifications
+    ?.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    ?.slice(0, 3);  // Ensure we only show 3 notifications max
 
   return (
     <div className="notification-bell-container">
@@ -31,13 +31,12 @@ const NotificationBell = () => {
         )}
       </div>
 
-      {showNotifications && notifications?.length > 0 && (
+      {showNotifications && sortedNotifications?.length > 0 && (
         <div className="notification-dropdown">
-          {notifications.map((notification) => (
+          {sortedNotifications.map((notification) => (
             <div 
               key={notification.id} 
-              className="notification-item"
-              onClick={() => handleNotificationClick(notification)}
+              className={`notification-item ${!notification.read ? 'unread' : ''}`}
             >
               <p>{notification.message}</p>
               <span className="notification-date">
