@@ -130,9 +130,25 @@ export function UserProvider({ children }) {
     }
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  const markAllNotificationsAsRead = async () => {
+    if (!user) return;
+    try {
+      const response = await fetch(`/users/${user.id}/notifications`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(notification => ({ ...notification, read: true }))
+        );
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+};
 
   return (
     <UserContext.Provider value={{
@@ -146,6 +162,7 @@ export function UserProvider({ children }) {
       fetchWatchlist,
       notifications,
       markNotificationAsRead,
+      markAllNotificationsAsRead,
       fetchNotifications
     }}>
       {children}

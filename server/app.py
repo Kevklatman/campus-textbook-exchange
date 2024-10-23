@@ -503,18 +503,49 @@ class LoginResource(Resource):
         return {'message': 'Login endpoint'}, 200
     
 class NotificationResource(Resource):
-    def get(self, user_id):
-        notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).all()
-        return [notification.to_dict() for notification in notifications], 200
+    def get(self, user_id=None):
+        try:
+            notifications = Notification.query.filter_by(user_id=current_user.id)\
+                .order_by(Notification.created_at.desc()).all()
+            return [notification.to_dict() for notification in notifications], 200
+        except Exception as e:
+            print(f"Error fetching notifications: {str(e)}")
+            return {"message": "Error fetching notifications"}, 500
 
-    def patch(self, notification_id):
-        notification = Notification.query.get(notification_id)
-        if not notification:
-            return {"message": "Notification not found"}, 404
+    def patch(self, user_id=None, notification_id=None):
+        try:
+            # Handle mark-all-read case
+            if user_id and not notification_id:
+                if user_id != current_user.id:
+                    return {"message": "Unauthorized"}, 401
+                
+                notifications = Notification.query.filter_by(
+                    user_id=current_user.id,
+                    read=False
+                ).all()
+                
+                for notification in notifications:
+                    notification.read = True
+                
+                db.session.commit()
+                return {"message": "All notifications marked as read"}, 200
+            
+            elif notification_id:
+                notification = Notification.query.get(notification_id)
+                if not notification:
+                    return {"message": "Notification not found"}, 404
 
-        notification.read = True
-        db.session.commit()
-        return notification.to_dict(), 200
+                if notification.user_id != current_user.id:
+                    return {"message": "Unauthorized"}, 401
+
+                notification.read = True
+                db.session.commit()
+                return notification.to_dict(), 200
+                
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error updating notification(s): {str(e)}")
+            return {"message": "Error updating notification(s)"}, 500
 
         
 
@@ -531,8 +562,9 @@ api.add_resource(CheckSessionResource, '/check_session')
 api.add_resource(SignupResource, '/signup')
 api.add_resource(WatchlistResource, '/users/<int:user_id>/watchlist', '/users/<int:user_id>/watchlist/<int:post_id>')
 api.add_resource(NotificationResource, 
-    '/users/<int:user_id>/notifications',
-    '/notifications/<int:notification_id>')
+    '/users/<int:user_id>/notifications',  
+    '/notifications/<int:notification_id>'  
+)
 api.add_resource(UserResource, '/users', '/users/<int:user_id>')
 if __name__ == '__main__':
     app.run(debug=True)
