@@ -2,6 +2,7 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
+import NotificationBell from './NotificationBell';
 import '../index.css';
 
 function Navbar() {
@@ -23,6 +24,7 @@ function Navbar() {
       <div className="navbar-right">
         {user ? (
           <>
+            <NotificationBell />
             <span className="navbar-welcome">Welcome, {user.email}</span>
             <button className="navbar-logout" onClick={logout}>Sign Out</button>
           </>
