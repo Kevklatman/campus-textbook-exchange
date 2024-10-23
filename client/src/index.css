@@ -557,16 +557,14 @@ textarea::placeholder {
 
 .view-details:hover {
   background-color: #0056b3;
-  color: white;  /* Add this to keep text white on hover */
+  color: white;
 }
 
-/* Also ensure the link version has the same behavior */
 a.action-button.view-details:hover {
   color: white;
   text-decoration: none;
 }
 
-/* Add this to ensure text stays visible in all button states */
 .action-button:hover {
   color: white;
 }
