@@ -147,6 +147,7 @@ class PostResource(Resource):
             textbook = post.textbook
             textbook.title = data.get('title', textbook.title)
             textbook.author = data.get('author', textbook.author)
+            textbook.subject = data.get('subject', textbook.subject)  # Add subject update
             if 'isbn' in data:
                 try:
                     isbn = int(data['isbn'])

@@ -6,6 +6,19 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
   const [newImage, setNewImage] = useState(null);
   const { updatePost } = useContext(PostContext);
 
+  const subjectOptions = [
+    'Mathematics',
+    'Computer Science',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'Economics',
+    'Psychology',
+    'Other'
+  ];
+
+  const conditionOptions = ['New', 'Like New', 'Very Good', 'Good', 'Acceptable'];
+
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://widget.cloudinary.com/v2.0/global/all.js';
@@ -19,7 +32,7 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'title' || name === 'author' || name === 'isbn') {
+    if (name === 'title' || name === 'author' || name === 'isbn' || name === 'subject') {
       setEditedPost((prevPost) => ({
         ...prevPost,
         textbook: {
@@ -62,6 +75,7 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
     formData.append('title', editedPost.textbook.title);
     formData.append('author', editedPost.textbook.author);
     formData.append('isbn', editedPost.textbook.isbn);
+    formData.append('subject', editedPost.textbook.subject);
     if (newImage) {
       formData.append('image_public_id', newImage);
     }
@@ -83,8 +97,6 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
       console.error('Error updating post:', error);
     }
   };
-
-  const conditionOptions = ['New', 'Like New', 'Very Good', 'Good', 'Acceptable'];
 
   return (
     <div className="create-post-page">
@@ -123,6 +135,21 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
                 value={editedPost.textbook.isbn}
                 onChange={handleChange}
               />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="subject">Subject:</label>
+              <select
+                id="subject"
+                name="subject"
+                value={editedPost.textbook.subject || ''}
+                onChange={handleChange}
+              >
+                <option value="">Select subject</option>
+                {subjectOptions.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
             </div>
 
             <div className="form-group">
