@@ -4,7 +4,7 @@ import requests
 from random import randint, choice as rc
 from faker import Faker
 from app import app
-from models import db, User, Textbook, Comment, Post, Watchlist
+from models import db, User, Textbook, Comment, Post, Watchlist, Notification
 from cloudinary.uploader import upload
 import cloudinary
 from config import CLOUDINARY_UPLOAD_PRESET, cloudinary
@@ -395,9 +395,52 @@ def seed_watchlists(users, posts, num_watchlists=40):
             db.session.rollback()
             print(f"❌ Error creating watchlist item {i}: {str(e)}")
 
+def seed_notifications(users, posts, num_notifications=30):
+    """Create sample notifications"""
+    print("🌱 Seeding notifications...")
+    
+    notification_templates = [
+        "Price dropped for {} from ${} to ${}!",
+        "The price of {} has been reduced from ${} to ${}!",
+        "Good news! {} is now ${} cheaper! New price: ${}",
+    ]
+
+    for i in range(num_notifications):
+        try:
+            user = rc(users)
+            post = rc(posts)
+            original_price = randint(50, 200)
+            new_price = original_price - randint(10, 40)
+            
+            template = rc(notification_templates)
+            message = template.format(
+                post.textbook.title,
+                original_price,
+                new_price
+            )
+
+            notification = Notification(
+                user_id=user.id,
+                post_id=post.id,
+                message=message,
+                created_at=fake.date_time_this_year(),
+                read=rc([True, False, False])  # Make some read, some unread
+            )
+            
+            db.session.add(notification)
+            db.session.commit()
+            print(f"✅ Created notification for user {user.email}")
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ Error creating notification {i}: {str(e)}")
+
 if __name__ == '__main__':
     with app.app_context():
         print("🌱 Starting seed process...")
+        
+        # Import the Notification model at the top of your seed.py file
+        from models import db, User, Textbook, Comment, Post, Watchlist, Notification
+        
         users = seed_users()
         if not users:
             print("❌ Failed to create users. Exiting.")
@@ -415,5 +458,6 @@ if __name__ == '__main__':
         
         seed_comments(users, posts)
         seed_watchlists(users, posts)
+        seed_notifications(users, posts)  # Add this line
         
         print("\n✨ Seeding complete! Database is ready.")

@@ -22,6 +22,8 @@ class User(db.Model, SerializerMixin, UserMixin):
     posts = relationship('Post', back_populates='user', cascade="all, delete-orphan")
     comments = relationship('Comment', back_populates='user', cascade="all, delete-orphan")
     watchlists = relationship('Watchlist', back_populates='user', cascade="all, delete-orphan")
+    notifications = relationship('Notification', back_populates='user', cascade="all, delete-orphan")
+
 
     textbooks = relationship('Textbook', secondary='posts', viewonly=True)
 
@@ -127,6 +129,8 @@ class Post(db.Model, SerializerMixin):
     textbook = relationship('Textbook', back_populates='posts')
     comments = relationship('Comment', back_populates='post', cascade="all, delete-orphan")
     watchlists = relationship('Watchlist', back_populates='post', cascade="all, delete-orphan")
+    notifications = relationship('Notification', back_populates='post', cascade="all, delete-orphan")
+
 
     def __repr__(self):
         return f"<Post(id={self.id}, textbook_id={self.textbook_id}, user_id={self.user_id}, price={self.price})>"
@@ -164,3 +168,21 @@ class Watchlist(db.Model, SerializerMixin):
 
     def __repr__(self):
         return f"<Watchlist(id={self.id}, user_id={self.user_id}, post_id={self.post_id}, textbook_id={self.textbook_id})>"
+    
+class Notification(db.Model, SerializerMixin):
+    __tablename__ = "notifications"
+
+    serialize_only = ('id', 'user_id', 'post_id', 'message', 'created_at', 'read')
+
+    id = db.Column(Integer, primary_key=True)
+    user_id = db.Column(Integer, ForeignKey('users.id'), nullable=False)
+    post_id = db.Column(Integer, ForeignKey('posts.id'), nullable=False)
+    message = db.Column(String, nullable=False)
+    created_at = db.Column(DateTime, server_default=func.now())
+    read = db.Column(db.Boolean, default=False)
+
+    user = relationship('User', back_populates='notifications')
+    post = relationship('Post', back_populates='notifications')
+
+    def __repr__(self):
+        return f"<Notification(id={self.id}, user_id={self.user_id}, read={self.read})>"

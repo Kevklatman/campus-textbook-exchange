@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request, make_response, session, Response
 from flask_restful import Resource, Api
-from models import Post, Textbook, User, Comment, Watchlist
+from models import Post, Textbook, User, Comment, Watchlist, Notification
 from config import *
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -137,6 +137,7 @@ class PostResource(Resource):
             return {"message": "No input data provided"}, 400
 
         try:
+            # Store original price for comparison
             original_price = float(post.price)
 
             # Update post fields
@@ -147,7 +148,8 @@ class PostResource(Resource):
             textbook = post.textbook
             textbook.title = data.get('title', textbook.title)
             textbook.author = data.get('author', textbook.author)
-            textbook.subject = data.get('subject', textbook.subject)  # Add subject update
+            textbook.subject = data.get('subject', textbook.subject)
+            
             if 'isbn' in data:
                 try:
                     isbn = int(data['isbn'])
@@ -156,23 +158,36 @@ class PostResource(Resource):
                 except ValueError as e:
                     return {"message": str(e)}, 400
 
+            # Handle image update
             image_public_id = data.get('image_public_id')
             if image_public_id:
                 post.img = image_public_id
 
-            db.session.commit()
-
-            # Check for price drop
+            # Check for price drop and create notifications
             new_price = float(post.price)
             if new_price < original_price:
                 watchlist_items = Watchlist.query.filter_by(post_id=post_id).all()
                 for item in watchlist_items:
+                    # Create notification for each user watching this post
+                    notification = Notification(
+                        user_id=item.user_id,
+                        post_id=post_id,
+                        message=f"Price dropped for {post.textbook.title} from ${original_price:.2f} to ${new_price:.2f}!"
+                    )
+                    db.session.add(notification)
+                    
+                    # Also send email notification
                     user = User.query.get(item.user_id)
                     if user:
                         subject = f"Price Drop Alert: {post.textbook.title}"
-                        body = f"The price of {post.textbook.title} has dropped to ${post.price}. Check it out now!"
+                        body = f"The price of {post.textbook.title} has dropped from ${original_price:.2f} to ${new_price:.2f}. Check it out now!"
                         recipients = [user.email]
-                        send_email(subject, recipients, body)
+                        try:
+                            send_email(subject, recipients, body)
+                        except Exception as e:
+                            print(f"Error sending email notification: {str(e)}")
+
+            db.session.commit()
 
             post_data = post.to_dict()
             post_data['textbook'] = textbook.to_dict()
@@ -180,6 +195,7 @@ class PostResource(Resource):
 
             print("Returning updated post data:", post_data)
             return post_data, 200
+            
         except Exception as e:
             db.session.rollback()
             print("Error updating post:", str(e))
@@ -485,6 +501,20 @@ class LoginResource(Resource):
 
     def get(self):
         return {'message': 'Login endpoint'}, 200
+    
+class NotificationResource(Resource):
+    def get(self, user_id):
+        notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc()).all()
+        return [notification.to_dict() for notification in notifications], 200
+
+    def patch(self, notification_id):
+        notification = Notification.query.get(notification_id)
+        if not notification:
+            return {"message": "Notification not found"}, 404
+
+        notification.read = True
+        db.session.commit()
+        return notification.to_dict(), 200
 
         
 
@@ -500,6 +530,9 @@ api.add_resource(LogoutResource, '/logout')
 api.add_resource(CheckSessionResource, '/check_session')
 api.add_resource(SignupResource, '/signup')
 api.add_resource(WatchlistResource, '/users/<int:user_id>/watchlist', '/users/<int:user_id>/watchlist/<int:post_id>')
+api.add_resource(NotificationResource, 
+    '/users/<int:user_id>/notifications',
+    '/notifications/<int:notification_id>')
 api.add_resource(UserResource, '/users', '/users/<int:user_id>')
 if __name__ == '__main__':
     app.run(debug=True)
