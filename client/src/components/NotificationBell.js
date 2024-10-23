@@ -1,15 +1,16 @@
 // src/components/NotificationBell.js
 import React, { useContext, useState, useEffect, useRef } from 'react';
+import { useHistory } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
 
 const NotificationBell = () => {
+  const history = useHistory();
   const { notifications, markAllNotificationsAsRead } = useContext(UserContext);
   const [showNotifications, setShowNotifications] = useState(false);
-  const notificationRef = useRef(null);  // Add ref for the dropdown container
+  const notificationRef = useRef(null);
 
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
-  // Handle clicks outside the notification component
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
@@ -17,26 +18,28 @@ const NotificationBell = () => {
       }
     };
 
-    // Add event listener
     document.addEventListener('mousedown', handleClickOutside);
-
-    // Cleanup the event listener
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
   const handleBellClick = async (e) => {
-    e.stopPropagation();  // Prevent event from bubbling up
+    e.stopPropagation();
     setShowNotifications(!showNotifications);
     if (!showNotifications && unreadCount > 0) {
       await markAllNotificationsAsRead();
     }
   };
 
+  const handleNotificationClick = (notification) => {
+    history.push(`/posts/${notification.post_id}`);
+    setShowNotifications(false); // Close the dropdown after clicking
+  };
+
   const sortedNotifications = notifications
     ?.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    ?.slice(0, 3);  // Ensure we only show 3 notifications max
+    ?.slice(0, 3);
 
   return (
     <div className="notification-bell-container" ref={notificationRef}>
@@ -56,6 +59,7 @@ const NotificationBell = () => {
             <div 
               key={notification.id} 
               className={`notification-item ${!notification.read ? 'unread' : ''}`}
+              onClick={() => handleNotificationClick(notification)}
             >
               <p>{notification.message}</p>
               <span className="notification-date">
