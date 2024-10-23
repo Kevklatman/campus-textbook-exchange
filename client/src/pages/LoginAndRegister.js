@@ -6,13 +6,20 @@ import { UserContext } from "../contexts/UserContext";
 import { useHistory } from "react-router-dom";
 
 const LoginSchema = Yup.object().shape({
-  email: Yup.string().email("Invalid email").required("Required"),
+  email: Yup.string()
+    .email("Invalid email")
+    .required("Required")
+    .matches(/.+\.edu$/, "Must be a .edu email address"),
   password: Yup.string().required("Required"),
+  remember: Yup.boolean()
 });
 
 const RegisterSchema = Yup.object().shape({
   name: Yup.string().required("Required"),
-  email: Yup.string().email("Invalid email").required("Required"),
+  email: Yup.string()
+    .email("Invalid email")
+    .required("Required")
+    .matches(/.+\.edu$/, "Must be a .edu email address"),
   password: Yup.string()
     .min(6, "Password must be at least 6 characters")
     .required("Required"),
@@ -61,7 +68,7 @@ function LoginAndRegister() {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Registration failed");
+        throw new Error(errorData.message || "Registration failed");
       }
       const userData = await response.json();
       login(userData);
@@ -75,33 +82,61 @@ function LoginAndRegister() {
 
   return (
     <div className="login-register">
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error-message">{error}</div>}
+      
       <div className="login-form">
         <h2>Login</h2>
         <Formik
-          initialValues={{ email: "", password: "" }}
+          initialValues={{ 
+            email: "", 
+            password: "",
+            remember: false 
+          }}
           validationSchema={LoginSchema}
           onSubmit={handleLogin}
         >
           {({ isSubmitting }) => (
             <Form>
-              <div>
+              <div className="form-group">
                 <label htmlFor="loginEmail">Email</label>
-                <Field type="email" name="email" id="loginEmail" />
+                <Field 
+                  type="email" 
+                  name="email" 
+                  id="loginEmail"
+                  placeholder="university.email@school.edu" 
+                />
                 <ErrorMessage name="email" component="div" className="error" />
               </div>
-              <div>
+
+              <div className="form-group">
                 <label htmlFor="loginPassword">Password</label>
-                <Field type="password" name="password" id="loginPassword" />
-                <ErrorMessage
-                  name="password"
-                  component="div"
-                  className="error"
+                <Field 
+                  type="password" 
+                  name="password" 
+                  id="loginPassword"
+                  placeholder="Enter your password" 
                 />
+                <ErrorMessage name="password" component="div" className="error" />
               </div>
-              <button type="submit" className="btn-success" disabled={isSubmitting}>
-  {isSubmitting ? "Logging in..." : "Login"}
-</button>
+
+              <div className="form-group checkbox-group">
+                <label className="remember-label">
+                  <Field 
+                    type="checkbox" 
+                    name="remember" 
+                    className="remember-checkbox"
+                  />
+                  <span>Remember me</span>
+                </label>
+              </div>
+
+              <button 
+                type="submit" 
+                className="btn btn-success" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Logging in..." : "Login"}
+              </button>
             </Form>
           )}
         </Formik>
@@ -110,34 +145,56 @@ function LoginAndRegister() {
       <div className="register-form">
         <h2>Sign Up</h2>
         <Formik
-          initialValues={{ name: "", email: "", password: "" }}
+          initialValues={{ 
+            name: "", 
+            email: "", 
+            password: "" 
+          }}
           validationSchema={RegisterSchema}
           onSubmit={handleSignup}
         >
           {({ isSubmitting }) => (
             <Form>
-              <div>
+              <div className="form-group">
                 <label htmlFor="signupName">Name</label>
-                <Field type="text" name="name" id="signupName" />
+                <Field 
+                  type="text" 
+                  name="name" 
+                  id="signupName"
+                  placeholder="Enter your full name" 
+                />
                 <ErrorMessage name="name" component="div" className="error" />
               </div>
-              <div>
+
+              <div className="form-group">
                 <label htmlFor="signupEmail">Email</label>
-                <Field type="email" name="email" id="signupEmail" />
+                <Field 
+                  type="email" 
+                  name="email" 
+                  id="signupEmail"
+                  placeholder="university.email@school.edu" 
+                />
                 <ErrorMessage name="email" component="div" className="error" />
               </div>
-              <div>
+
+              <div className="form-group">
                 <label htmlFor="signupPassword">Password</label>
-                <Field type="password" name="password" id="signupPassword" />
-                <ErrorMessage
-                  name="password"
-                  component="div"
-                  className="error"
+                <Field 
+                  type="password" 
+                  name="password" 
+                  id="signupPassword"
+                  placeholder="Minimum 6 characters" 
                 />
+                <ErrorMessage name="password" component="div" className="error" />
               </div>
-              <button type="submit" className="btn-success" disabled={isSubmitting}>
-  {isSubmitting ? "Signing up..." : "Sign Up"}
-</button>
+
+              <button 
+                type="submit" 
+                className="btn btn-success" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Signing up..." : "Sign Up"}
+              </button>
             </Form>
           )}
         </Formik>

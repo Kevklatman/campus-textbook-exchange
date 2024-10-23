@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, make_response, session
+from flask import Flask, jsonify, request, make_response, session, Response
 from flask_restful import Resource, Api
 from models import Post, Textbook, User, Comment, Watchlist
 from config import *
@@ -402,9 +402,14 @@ class WatchlistResource(Resource):
             return {"message": "Internal Server Error", "error": str(e)}, 500
 class LogoutResource(Resource):
     def post(self):
-        logout_user()  # Logout the user
-        session.clear()  # Clear the session
-        return {"message": "Logged out successfully"}, 200
+        logout_user()
+        session.clear()
+        
+        # Create a response to clear the remember cookie
+        response = Response({"message": "Logged out successfully"}, 200)
+        # Clear the remember cookie
+        response.set_cookie('remember_token', '', expires=0)  # Expire the remember token
+        return response
 
 class CheckSessionResource(Resource):
     def get(self):
@@ -456,15 +461,14 @@ class LoginResource(Resource):
     def post(self):
         data = request.get_json()
         
-        # Handle case where no data is sent
         if not data:
             logger.warning("No input data provided for login")
             return {"message": "No input data provided"}, 400
 
         email = data.get('email')
         password = data.get('password')
+        remember = data.get('remember', False)  # Add this line
 
-        # Handle case where email or password is missing
         if not email or not password:
             logger.warning("Email or password missing in login attempt")
             return {"message": "Email and password are required"}, 400
@@ -472,8 +476,8 @@ class LoginResource(Resource):
         user = User.query.filter_by(email=email).first()
 
         if user and user.authenticate(password):
-            login_user(user)
-            logger.info(f"User {email} logged in successfully")
+            login_user(user, remember=remember)  # Add remember parameter
+            logger.info(f"User {email} logged in successfully with remember={remember}")
             return user.to_dict(), 200
         else:
             logger.warning(f"Failed login attempt for user: {email}")
