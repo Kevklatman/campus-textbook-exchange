@@ -400,7 +400,8 @@ class WatchlistResource(Resource):
             return {"message": "Internal Server Error", "error": str(e)}, 500
 class LogoutResource(Resource):
     def post(self):
-        session.pop('user_id', None)
+        logout_user()  # Logout the user
+        session.clear()  # Clear the session
         return {"message": "Logged out successfully"}, 200
 
 class CheckSessionResource(Resource):
