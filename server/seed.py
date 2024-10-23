@@ -397,11 +397,7 @@ def seed_watchlists(users, posts, num_watchlists=40):
 
 if __name__ == '__main__':
     with app.app_context():
-        print("🗑️ Clearing database...")
-        db.drop_all()
-        db.create_all()
-        
-        print("\n🌱 Starting seed process...")
+        print("🌱 Starting seed process...")
         users = seed_users()
         if not users:
             print("❌ Failed to create users. Exiting.")
