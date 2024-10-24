@@ -1,11 +1,12 @@
-// src/components/NotificationBell.js
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
+import { PostContext } from '../contexts/PostContext';
 
 const NotificationBell = () => {
   const history = useHistory();
   const { notifications, markAllNotificationsAsRead } = useContext(UserContext);
+  const { posts, fetchAllPosts } = useContext(PostContext);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
 
@@ -32,9 +33,13 @@ const NotificationBell = () => {
     }
   };
 
-  const handleNotificationClick = (notification) => {
+  const handleNotificationClick = async (notification) => {
+    // Ensure we have the latest posts data before navigating
+    if (posts.length === 0) {
+      await fetchAllPosts();
+    }
     history.push(`/posts/${notification.post_id}`);
-    setShowNotifications(false); // Close the dropdown after clicking
+    setShowNotifications(false);
   };
 
   const sortedNotifications = notifications
