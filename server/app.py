@@ -9,6 +9,9 @@ from flask_mail import Message
 import logging
 from cloudinary.uploader import upload
 from cloudinary.utils import cloudinary_url
+from flask import session
+from datetime import timedelta
+from flask_wtf.csrf import generate_csrf
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -486,6 +489,11 @@ class SignupResource(Resource):
             return {"message": f"An error occurred while creating the user: {str(e)}"}, 500
 
 
+@app.before_request
+def before_request():
+    session.permanent = True  # Enable permanent session
+    app.permanent_session_lifetime = timedelta(days=7)
+
 class LoginResource(Resource):
     def post(self):
         data = request.get_json()
@@ -496,7 +504,7 @@ class LoginResource(Resource):
 
         email = data.get('email')
         password = data.get('password')
-        remember = data.get('remember', False)  # Add this line
+        remember = data.get('remember', False)
 
         if not email or not password:
             logger.warning("Email or password missing in login attempt")
@@ -505,18 +513,37 @@ class LoginResource(Resource):
         user = User.query.filter_by(email=email).first()
 
         if user and user.authenticate(password):
-            login_user(user, remember=remember)  # Add remember parameter
-            logger.info(f"User {email} logged in successfully with remember={remember}")
-            return user.to_dict(), 200
+            login_user(user, remember=remember)
+            if remember:
+                # Set permanent session
+                session.permanent = True
+            # Store user info in session
+            session['user_id'] = user.id
+            session['email'] = user.email
+            
+            response = make_response(user.to_dict(), 200)
+            # Set secure cookie attributes
+            response.set_cookie(
+                'session',
+                domain=None,  # Restrict to same domain
+                secure=True,  # Require HTTPS
+                httponly=True,  # Prevent JavaScript access
+                samesite='Lax'  # CSRF protection
+            )
+            return response
         else:
             logger.warning(f"Failed login attempt for user: {email}")
             return {"message": "Invalid email or password"}, 401
 
-    def get(self):
-        return {'message': 'Login endpoint'}, 200
+@app.after_request
+def after_request(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
     
 class NotificationResource(Resource):
-    MAX_NOTIFICATIONS = 3  # Class constant for max notifications
+    MAX_NOTIFICATIONS = 3  
 
     def get(self, user_id=None):
         try:
@@ -567,7 +594,27 @@ class NotificationResource(Resource):
 
         
 
+# Add CSRF token endpoint
+@app.route('/csrf_token')
+def csrf_token():
+    token = generate_csrf()
+    response = jsonify({'csrf_token': token})
+    return response
 
+# Optional: Set CSRF token in cookie for JS to access
+@app.after_request
+def add_csrf_cookie(response):
+    if 'csrf_token' not in request.cookies:
+        response.set_cookie('csrf_token', generate_csrf(),
+                          secure=True,  # Requires HTTPS
+                          httponly=False,  # Allows JavaScript access
+                          samesite='Strict')  # CSRF protection
+    return response
+
+# Update error handler to handle CSRF errors
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    return jsonify({'error': 'CSRF token is missing or invalid'}), 400
 
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
 api.add_resource(TextbookResource, '/textbooks', '/textbooks/<int:textbook_id>')

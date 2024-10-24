@@ -12,6 +12,8 @@ from sqlalchemy import MetaData
 from flask_uploads import UploadSet, IMAGES, configure_uploads
 from flask_mail import Mail
 import cloudinary
+from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
+from datetime import timedelta
 
 # Instantiate app, set attributes
 app = Flask(__name__)
@@ -71,3 +73,24 @@ cloudinary.config(
 )
 
 CLOUDINARY_UPLOAD_PRESET = "unsigned"
+
+from datetime import timedelta
+from flask_wtf.csrf import CSRFProtect
+
+# Add these configurations
+app.config.update(
+    SESSION_COOKIE_SECURE=True,  # For HTTPS
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7),  # Session lasts 7 days
+    SESSION_REFRESH_EACH_REQUEST=True
+)
+
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
+
+app.config.update(
+    WTF_CSRF_ENABLED=True,
+    WTF_CSRF_CHECK_DEFAULT=False,  # We'll check it manually for API endpoints
+    WTF_CSRF_TIME_LIMIT=None  # Optional: removes time limit on tokens
+)
