@@ -43,3 +43,5 @@
 2024-10-23 23:53:30,995 INFO [app] Application initialization completed [in /Users/kevinklatman/Development/Code/phase-4/template/server/config.py:126]
 2024-10-23 23:56:57,883 INFO [app] User successfully logged out [in /Users/kevinklatman/Development/Code/phase-4/template/server/app.py:504]
 2024-10-23 23:57:02,576 INFO [app] Login successful for user: kevin.klatman@colorado.edu [in /Users/kevinklatman/Development/Code/phase-4/template/server/app.py:468]
+2024-10-23 23:57:42,469 INFO [app] User successfully logged out [in /Users/kevinklatman/Development/Code/phase-4/template/server/app.py:504]
+2024-10-23 23:58:00,641 INFO [app] Login successful for user: kevin.klatman@colorado.edu [in /Users/kevinklatman/Development/Code/phase-4/template/server/app.py:468]
