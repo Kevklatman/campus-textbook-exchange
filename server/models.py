@@ -7,6 +7,7 @@ from flask_bcrypt import generate_password_hash, check_password_hash
 from config import db
 import re
 from cloudinary.utils import cloudinary_url
+from config import app_logger  
 
 
 class User(db.Model, SerializerMixin, UserMixin):
@@ -49,11 +50,23 @@ class User(db.Model, SerializerMixin, UserMixin):
     @password_hash.setter
     def password_hash(self, plain_text_password):
         if plain_text_password is None:
+            app_logger.error("Attempt to set None as password")
             raise ValueError("Password cannot be None")
+            
+        app_logger.debug(f"Setting new password hash for user: {self.email if hasattr(self, 'email') else 'new user'}")
         self._password_hash = generate_password_hash(plain_text_password).decode('utf-8')
     
     def authenticate(self, password):
-        return check_password_hash(self._password_hash, password)
+        app_logger.debug(f"Starting authentication for user: {self.email}")
+        
+        if not self._password_hash:
+            app_logger.error(f"No password hash found for user: {self.email}")
+            return False
+            
+        result = check_password_hash(self._password_hash, password)
+        app_logger.debug(f"Password verification result for {self.email}: {result}")
+        
+        return result
 
 class Textbook(db.Model, SerializerMixin):
     __tablename__ = "textbooks"

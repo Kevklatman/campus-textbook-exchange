@@ -1,5 +1,6 @@
 # Standard library imports
 import os
+from datetime import timedelta
 
 # Remote library imports
 from flask import Flask
@@ -12,6 +13,8 @@ from sqlalchemy import MetaData
 from flask_uploads import UploadSet, IMAGES, configure_uploads
 from flask_mail import Mail
 import cloudinary
+import logging 
+from logging.handlers import RotatingFileHandler
 
 # Instantiate app, set attributes
 app = Flask(__name__)
@@ -26,6 +29,17 @@ app.config['UPLOADED_IMAGES_DEST'] = 'uploads/images'
 ALLOWED_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif']
 images = UploadSet('images', IMAGES)
 configure_uploads(app, images)
+
+# Session configuration
+app.config.update(
+    SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
+    REMEMBER_COOKIE_DURATION=timedelta(days=7),
+    REMEMBER_COOKIE_SECURE=False,  # Set to True in production with HTTPS
+    REMEMBER_COOKIE_HTTPONLY=True,
+)
 
 # Define metadata with comprehensive naming convention
 metadata = MetaData(naming_convention={
@@ -72,13 +86,41 @@ cloudinary.config(
 
 CLOUDINARY_UPLOAD_PRESET = "unsigned"
 
-from datetime import timedelta
+# Create logs directory if it doesn't exist
+if not os.path.exists('logs'):
+    os.makedirs('logs')
 
-app.config.update(
-    SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax',
-    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
-    REMEMBER_COOKIE_DURATION=timedelta(days=7),
-    REMEMBER_COOKIE_HTTPONLY=True,
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+app_logger = logging.getLogger('app')
+app_logger.setLevel(logging.DEBUG)
+
+# Prevent duplicate logs
+app_logger.propagate = False
+
+# Create handlers
+file_handler = RotatingFileHandler('logs/app.log', maxBytes=10240, backupCount=10, encoding='utf-8')
+console_handler = logging.StreamHandler()
+
+# Create formatters and add it to handlers
+log_format = logging.Formatter(
+    '%(asctime)s %(levelname)s [%(name)s] %(message)s [in %(pathname)s:%(lineno)d]'
 )
+file_handler.setFormatter(log_format)
+console_handler.setFormatter(log_format)
+
+# Add handlers to the logger
+app_logger.addHandler(file_handler)
+app_logger.addHandler(console_handler)
+
+# Set log levels based on app environment
+if app.debug:
+    file_handler.setLevel(logging.DEBUG)
+    console_handler.setLevel(logging.DEBUG)
+    app_logger.debug('Running in debug mode')
+else:
+    file_handler.setLevel(logging.INFO)
+    console_handler.setLevel(logging.INFO)
+    app_logger.info('Running in production mode')
+
+app_logger.info('Application initialization completed')

@@ -13,6 +13,17 @@ from cloudinary.utils import cloudinary_url
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+@app.before_request
+def log_request_info():
+    app_logger.debug('Headers: %s', request.headers)
+    app_logger.debug('Body: %s', request.get_data())
+
+@app.after_request
+def log_response_info(response):
+    app_logger.debug('Response Status: %s', response.status)
+    app_logger.debug('Response Headers: %s', response.headers)
+    return response
+
 configure_uploads(app, images)
 
 login_manager = LoginManager()
@@ -412,15 +423,7 @@ class WatchlistResource(Resource):
             db.session.rollback()
             logging.error(f"Error deleting watchlist item: {str(e)}")
             return {"message": "Internal Server Error", "error": str(e)}, 500
-class LogoutResource(Resource):
-    def post(self):
-        logout_user()
-        session.clear()
-        
-        response = make_response({"message": "Logged out successfully"})
-        response.delete_cookie('session')
-        response.delete_cookie('remember_token')
-        return response, 200
+
 
 class CheckSessionResource(Resource):
     def get(self):
@@ -428,11 +431,88 @@ class CheckSessionResource(Resource):
             return current_user.to_dict(), 200
         return {'error': '401 Unauthorized'}, 401
 
+class LoginResource(Resource):
+    def post(self):
+        try:
+            # Log the raw request data for debugging
+            app_logger.debug(f"Raw request data: {request.get_data()}")
+            app_logger.debug(f"Request content type: {request.content_type}")
+            app_logger.debug(f"Request headers: {request.headers}")
+            
+            data = request.get_json()
+            app_logger.debug(f"Parsed JSON data: {data}")
+            
+            if not data:
+                app_logger.warning("No input data provided for login")
+                return {"message": "No input data provided"}, 400
+
+            email = data.get('email')
+            password = data.get('password')
+            remember = data.get('remember', False)
+
+            app_logger.debug(f"Login attempt - Email: {email}, Remember: {remember}")
+
+            if not email or not password:
+                app_logger.warning(f"Missing credentials - Email present: {bool(email)}, Password present: {bool(password)}")
+                return {"message": "Email and password are required"}, 400
+
+            user = User.query.filter_by(email=email).first()
+            
+            if not user:
+                app_logger.warning(f"No user found with email: {email}")
+                return {"message": "Invalid email or password"}, 401
+
+            app_logger.debug(f"User found: {user.email}")
+            
+            if user.authenticate(password):
+                app_logger.info(f"Login successful for user: {user.email}")
+                login_user(user, remember=remember)
+                if remember:
+                    session.permanent = True
+                    app_logger.debug("Set permanent session")
+                
+                # Log the response data
+                response_data = user.to_dict()
+                app_logger.debug(f"Sending response data: {response_data}")
+                return response_data, 200
+            else:
+                app_logger.warning(f"Password verification failed for user: {user.email}")
+                return {"message": "Invalid email or password"}, 401
+                
+        except Exception as e:
+            app_logger.error(f"Login error: {str(e)}", exc_info=True)
+            return {"message": "An error occurred during login"}, 500
+
+class LogoutResource(Resource):
+    def post(self):
+        try:
+            logout_user()
+            session.clear()
+            
+            # Create a response dictionary
+            response_data = {"message": "Logged out successfully"}
+            
+            # Create the response with Flask-RESTful
+            response = jsonify(response_data)
+            
+            # Set cookie deletion headers
+            response.set_cookie('session', '', expires=0)
+            response.set_cookie('remember_token', '', expires=0)
+            response.set_cookie('session', '', domain=None, expires=0)
+            response.set_cookie('remember_token', '', domain=None, expires=0)
+            
+            app_logger.info(f"User successfully logged out")
+            return response
+            
+        except Exception as e:
+            app_logger.error(f"Logout error: {str(e)}", exc_info=True)
+            return {"message": "Error during logout"}, 500
+
 class SignupResource(Resource):
     def post(self):
         data = request.get_json()
         if not data:
-            logger.warning("No input data provided for signup")
+            app_logger.warning("No input data provided for signup")
             return {"message": "No input data provided"}, 400
 
         email = data.get('email')
@@ -440,66 +520,34 @@ class SignupResource(Resource):
         name = data.get('name')
 
         if not email or not password:
-            logger.warning("Email or password missing in signup attempt")
+            app_logger.warning("Email or password missing in signup attempt")
             return {"message": "Email and password are required"}, 400
 
         try:
             User.validate_email_format(email)
         except ValueError as e:
-            logger.warning(f"Invalid email format in signup attempt: {email}")
+            app_logger.warning(f"Invalid email format in signup attempt: {email}")
             return {"message": str(e)}, 400
 
         if User.query.filter_by(email=email).first():
-            logger.warning(f"Signup attempt with existing email: {email}")
+            app_logger.warning(f"Signup attempt with existing email: {email}")
             return {"message": "Email already exists"}, 400
 
-        new_user = User(email=email, name=name)
-        new_user.password_hash = password  # This will use the setter method to hash the password
-
         try:
+            new_user = User(email=email, name=name)
+            new_user.password_hash = password
+            
             db.session.add(new_user)
             db.session.commit()
             login_user(new_user)
-            logger.info(f"New user signed up and logged in: {email}")
+            
+            app_logger.info(f"New user signed up and logged in: {email}")
             return new_user.to_dict(), 201
+            
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error during user signup: {str(e)}")
+            app_logger.error(f"Error during user signup: {str(e)}", exc_info=True)
             return {"message": f"An error occurred while creating the user: {str(e)}"}, 500
-
-
-class LoginResource(Resource):
-    def post(self):
-        data = request.get_json()
-        
-        if not data:
-            logger.warning("No input data provided for login")
-            return {"message": "No input data provided"}, 400
-
-        email = data.get('email')
-        password = data.get('password')
-        remember = data.get('remember', False)
-
-        if not email or not password:
-            logger.warning("Email or password missing in login attempt")
-            return {"message": "Email and password are required"}, 400
-
-        user = User.query.filter_by(email=email).first()
-
-        if user and user.authenticate(password):
-            login_user(user, remember=remember)
-            if remember:
-                # Set permanent session when "remember me" is checked
-                session.permanent = True
-            logger.info(f"User {email} logged in successfully with remember={remember}")
-            response = make_response(user.to_dict())
-            return response, 200
-        else:
-            logger.warning(f"Failed login attempt for user: {email}")
-            return {"message": "Invalid email or password"}, 401
-
-    def get(self):
-        return {'message': 'Login endpoint'}, 200
     
 class NotificationResource(Resource):
     MAX_NOTIFICATIONS = 3  # Class constant for max notifications

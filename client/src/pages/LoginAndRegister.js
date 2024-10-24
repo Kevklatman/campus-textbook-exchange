@@ -25,60 +25,64 @@ const RegisterSchema = Yup.object().shape({
     .required("Required"),
 });
 
-function LoginAndRegister() {
-  const { login } = useContext(UserContext);
-  const history = useHistory();
-  const [error, setError] = useState(null);
-
-  const handleLogin = async (values, { setSubmitting }) => {
-    setError(null); // Clear any previous errors
-    try {
-      const response = await fetch("/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed");
+  function LoginAndRegister() {
+    const { login } = useContext(UserContext);
+    const history = useHistory();
+    const [error, setError] = useState(null);
+  
+    const handleLogin = async (values, { setSubmitting }) => {
+      setError(null);
+      try {
+        const response = await fetch("/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: 'include', // Add this line
+          body: JSON.stringify(values),
+        });
+        
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || "Login failed");
+        }
+        
+        const userData = await response.json();
+        await login(userData); // Await the login function
+        history.push("/");
+      } catch (error) {
+        console.error("Login error:", error);
+        setError(error.message);
+      } finally {
+        setSubmitting(false);
       }
-      
-      login(data);
-      history.push("/");
-    } catch (error) {
-      console.error("Login error:", error);
-      setError(error.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleSignup = async (values, { setSubmitting, resetForm }) => {
-    try {
-      const response = await fetch("/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Registration failed");
+    };
+  
+    const handleSignup = async (values, { setSubmitting }) => {
+      try {
+        const response = await fetch("/signup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: 'include', // Add this line
+          body: JSON.stringify(values),
+        });
+  
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Registration failed");
+        }
+  
+        const userData = await response.json();
+        await login(userData); // Await the login function
+        history.push("/");
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setSubmitting(false);
       }
-      const userData = await response.json();
-      login(userData);
-      history.push("/");
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    };
 
   return (
     <div className="login-register">

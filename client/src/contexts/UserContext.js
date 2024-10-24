@@ -40,56 +40,14 @@ export function UserProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const response = await fetch("/check_session", {
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-          if (userData.id) {
-            await fetchWatchlist(userData.id);
-            await fetchNotifications(userData.id);
-          }
-        }
-      } catch (error) {
-        console.error("Session check error:", error);
-        setUser(null);
-        setWatchlistPosts([]);
-        setNotifications([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkSession();
-  }, [fetchWatchlist, fetchNotifications]);
-
   const login = async (userData) => {
     try {
-      const response = await fetch("/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: 'include',
-        body: JSON.stringify(userData),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data);
-        if (data.id) {
-          await fetchWatchlist(data.id);
-          await fetchNotifications(data.id);
-        }
-        history.push('/');
-        return true;
+      setUser(userData);
+      if (userData.id) {
+        await fetchWatchlist(userData.id);
+        await fetchNotifications(userData.id);
       }
-      return false;
+      return true;
     } catch (error) {
       console.error("Login error:", error);
       return false;
@@ -113,6 +71,31 @@ export function UserProvider({ children }) {
       console.error("Logout error:", error);
     }
   };
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const response = await fetch("/check_session", {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+          if (userData.id) {
+            await fetchWatchlist(userData.id);
+            await fetchNotifications(userData.id);
+          }
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+  }, []);
 
   const addToWatchlist = async (postId, textbookId) => {
     if (!user) return;
