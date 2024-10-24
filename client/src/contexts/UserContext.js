@@ -3,13 +3,15 @@ import React, { createContext, useState, useEffect, useCallback } from "react";
 export const UserContext = createContext();
 
 export function UserProvider({ children }) {
+  // State definitions
   const [user, setUser] = useState(null);
   const [watchlistPosts, setWatchlistPosts] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [csrfToken, setCsrfToken] = useState(null);
+  const [pollingInterval, setPollingInterval] = useState(null);
 
-  // 1. First, define the basic CSRF token fetching
+  // 1. Base utilities
   const fetchCsrfToken = useCallback(async () => {
     try {
       const response = await fetch('/csrf_token', {
@@ -30,7 +32,6 @@ export function UserProvider({ children }) {
     }
   }, []);
 
-  // 2. Define getHeaders which doesn't depend on other functions
   const getHeaders = useCallback(() => {
     const headers = {
       'Accept': 'application/json',
@@ -42,7 +43,6 @@ export function UserProvider({ children }) {
     return headers;
   }, [csrfToken]);
 
-  // 3. Define makeRequest which depends on fetchCsrfToken and getHeaders
   const makeRequest = useCallback(async (url, options = {}) => {
     let token = csrfToken;
     
@@ -83,7 +83,7 @@ export function UserProvider({ children }) {
     return response;
   }, [csrfToken, getHeaders, fetchCsrfToken]);
 
-  // 4. Define data fetching functions that depend on makeRequest
+  // 2. Data fetching functions
   const fetchWatchlist = useCallback(async (userId) => {
     if (!userId) return;
     try {
@@ -112,68 +112,33 @@ export function UserProvider({ children }) {
     }
   }, [makeRequest]);
 
-  // 5. Define checkSession after its dependencies
-  const checkSession = useCallback(async (retryCount = 3) => {
-    try {
-      const response = await makeRequest("/check_session");
-      
-      if (!response.ok) {
-        if (response.status === 401 && retryCount > 0) {
-          await fetchCsrfToken();
-          return checkSession(retryCount - 1);
-        }
-        throw new Error('Session check failed');
-      }
-
-      const userData = await response.json();
-      if (userData && !userData.error) {
-        setUser(userData);
-        await Promise.all([
-          fetchWatchlist(userData.id),
-          fetchNotifications(userData.id)
-        ]);
-      } else {
-        setUser(null);
-        setWatchlistPosts([]);
-        setNotifications([]);
-      }
-    } catch (error) {
-      console.error("Session check error:", error);
-      setUser(null);
-      setWatchlistPosts([]);
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [makeRequest, fetchCsrfToken, fetchWatchlist, fetchNotifications]);
-
-  // 6. Initialize app with useEffect
-  useEffect(() => {
-    let mounted = true;
-
-    const initializeApp = async () => {
+  // 3. Notification polling functions
+  const startNotificationPolling = useCallback(() => {
+    if (pollingInterval || !user) return;
+    
+    const intervalId = setInterval(async () => {
       try {
-        setLoading(true);
-        await fetchCsrfToken();
-        await checkSession();
-      } catch (error) {
-        console.error("Initialization error:", error);
-        setUser(null);
-      } finally {
-        if (mounted) {
-          setLoading(false);
+        const response = await makeRequest(`/users/${user.id}/notifications`);
+        if (response.ok) {
+          const notificationsData = await response.json();
+          setNotifications(notificationsData || []);
         }
+      } catch (error) {
+        console.error('Error polling notifications:', error);
       }
-    };
+    }, 5000);
 
-    initializeApp();
+    setPollingInterval(intervalId);
+  }, [user, pollingInterval, makeRequest]);
 
-    return () => {
-      mounted = false;
-    };
-  }, [fetchCsrfToken, checkSession]);
+  const stopNotificationPolling = useCallback(() => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
+  }, [pollingInterval]);
 
-  // 7. Define remaining functions that depend on makeRequest
+  // 4. Auth functions
   const login = async (userData) => {
     try {
       const response = await makeRequest("/login", {
@@ -192,6 +157,7 @@ export function UserProvider({ children }) {
           fetchWatchlist(data.id),
           fetchNotifications(data.id)
         ]);
+        startNotificationPolling();
         return true;
       }
       return false;
@@ -201,7 +167,6 @@ export function UserProvider({ children }) {
     }
   };
 
-  // Rest of your functions...
   const logout = async () => {
     try {
       const response = await makeRequest("/logout", {
@@ -212,12 +177,14 @@ export function UserProvider({ children }) {
         setUser(null);
         setWatchlistPosts([]);
         setNotifications([]);
+        stopNotificationPolling();
       }
     } catch (error) {
       console.error("Logout error:", error);
     }
   };
 
+  // 5. Watchlist functions
   const addToWatchlist = async (postId, textbookId) => {
     if (!user) return;
     try {
@@ -235,69 +202,160 @@ export function UserProvider({ children }) {
     }
   };
 
-  // Add these functions after addToWatchlist and before the return statement:
+  const removeFromWatchlist = async (postId) => {
+    if (!user) return;
+    try {
+      const response = await makeRequest(`/users/${user.id}/watchlist/${postId}`, {
+        method: 'DELETE'
+      });
 
-const removeFromWatchlist = async (postId) => {
-  if (!user) return;
-  try {
-    const response = await makeRequest(`/users/${user.id}/watchlist/${postId}`, {
-      method: 'DELETE'
-    });
-
-    if (response.ok) {
-      setWatchlistPosts((prevWatchlist) => 
-        prevWatchlist.filter((post) => post.id !== postId)
-      );
+      if (response.ok) {
+        setWatchlistPosts((prevWatchlist) => 
+          prevWatchlist.filter((post) => post.id !== postId)
+        );
+      }
+    } catch (error) {
+      console.error('Error removing from watchlist:', error);
     }
-  } catch (error) {
-    console.error('Error removing from watchlist:', error);
-  }
-};
+  };
 
-const markNotificationAsRead = async (notificationId) => {
-  try {
-    const response = await makeRequest(`/notifications/${notificationId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ read: true })
-    });
+  // 6. Notification functions
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      const response = await makeRequest(`/notifications/${notificationId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ read: true })
+      });
 
-    if (response.ok) {
-      setNotifications(prev => 
-        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
-      );
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+        );
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
     }
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-  }
-};
+  };
 
-const markAllNotificationsAsRead = async () => {
-  if (!user) return;
-  try {
-    const response = await makeRequest(`/users/${user.id}/notifications`, {
-      method: 'PATCH'
-    });
+  const markAllNotificationsAsRead = async () => {
+    if (!user) return;
+    try {
+      const response = await makeRequest(`/users/${user.id}/notifications`, {
+        method: 'PATCH'
+      });
 
-    if (response.ok) {
-      setNotifications(prev => 
-        prev.map(notification => ({ ...notification, read: true }))
-      );
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(notification => ({ ...notification, read: true }))
+        );
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
     }
-  } catch (error) {
-    console.error('Error marking all notifications as read:', error);
-  }
-};
+  };
 
-const refreshUserData = async () => {
-  if (user) {
-    await Promise.all([
-      fetchWatchlist(user.id),
-      fetchNotifications(user.id)
-    ]);
-  }
-};
+  // 7. Utility functions
+  const refreshUserData = async () => {
+    if (user) {
+      await Promise.all([
+        fetchWatchlist(user.id),
+        fetchNotifications(user.id)
+      ]);
+    }
+  };
 
-  // Include your other functions here...
+  // 8. Session management
+  const checkSession = useCallback(async (retryCount = 3) => {
+    if (retryCount === 0) {
+      throw new Error('Max retries reached');
+    }
+
+    try {
+      const response = await makeRequest("/check_session");
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          await fetchCsrfToken();
+          return checkSession(retryCount - 1);
+        }
+        throw new Error('Session check failed');
+      }
+
+      const userData = await response.json();
+      if (userData && !userData.error) {
+        setUser(userData);
+        
+        // Only fetch these if we don't already have them and user changed
+        if (watchlistPosts.length === 0) {
+          await fetchWatchlist(userData.id);
+        }
+        if (notifications.length === 0) {
+          await fetchNotifications(userData.id);
+        }
+        
+        // Only start polling if logged in and not already polling
+        if (!pollingInterval) {
+          startNotificationPolling();
+        }
+      } else {
+        setUser(null);
+        setWatchlistPosts([]);
+        setNotifications([]);
+        stopNotificationPolling();
+      }
+    } catch (error) {
+      console.error("Session check error:", error);
+      setUser(null);
+      setWatchlistPosts([]);
+      setNotifications([]);
+      stopNotificationPolling();
+    } finally {
+      setLoading(false);
+    }
+  }, [makeRequest, fetchCsrfToken, pollingInterval, 
+      startNotificationPolling, stopNotificationPolling, 
+      fetchWatchlist, fetchNotifications, watchlistPosts.length, 
+      notifications.length]);
+
+  // 9. Initialization effect
+  useEffect(() => {
+    let mounted = true;
+
+    const initializeApp = async () => {
+      if (!mounted) return;
+      try {
+        setLoading(true);
+        
+        if (!csrfToken) {
+          await fetchCsrfToken();
+        }
+        
+        if (!user) {
+          await checkSession();
+        }
+      } catch (error) {
+        console.error("Initialization error:", error);
+        if (mounted) {
+          setUser(null);
+          setWatchlistPosts([]);
+          setNotifications([]);
+          stopNotificationPolling();
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeApp();
+
+    // Clean up function
+    return () => {
+      mounted = false;
+      stopNotificationPolling();
+    };
+  }, []); // Empty dependency array - this should only run once on mount
 
   return (
     <UserContext.Provider value={{
@@ -316,7 +374,9 @@ const refreshUserData = async () => {
       loading,
       makeRequest,
       csrfToken,
-      refreshUserData
+      refreshUserData,
+      startNotificationPolling,
+      stopNotificationPolling
     }}>
       {children}
     </UserContext.Provider>

@@ -5,12 +5,27 @@ import { PostContext } from '../contexts/PostContext';
 
 const NotificationBell = () => {
   const history = useHistory();
-  const { notifications, markAllNotificationsAsRead } = useContext(UserContext);
+  const { 
+    notifications, 
+    markAllNotificationsAsRead, 
+    startNotificationPolling, 
+    stopNotificationPolling 
+  } = useContext(UserContext);
   const { posts, fetchAllPosts } = useContext(PostContext);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
 
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
+
+  useEffect(() => {
+    // Start polling when component mounts
+    startNotificationPolling();
+    
+    // Stop polling when component unmounts
+    return () => {
+      stopNotificationPolling();
+    };
+  }, [startNotificationPolling, stopNotificationPolling]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -34,7 +49,6 @@ const NotificationBell = () => {
   };
 
   const handleNotificationClick = async (notification) => {
-    // Ensure we have the latest posts data before navigating
     if (posts.length === 0) {
       await fetchAllPosts();
     }
