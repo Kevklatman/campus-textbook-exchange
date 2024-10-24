@@ -1,3 +1,4 @@
+// MyPosts.js
 import React, { useContext, useEffect, useState } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { PostContext } from '../contexts/PostContext';
@@ -7,7 +8,7 @@ import { useHistory } from 'react-router-dom';
 
 function MyPosts() {
   const { user, watchlistPosts, addToWatchlist, removeFromWatchlist } = useContext(UserContext);
-  const { posts, setPosts, deletePost, fetchAllPosts } = useContext(PostContext);
+  const { posts, updatePost, deletePost, fetchAllPosts } = useContext(PostContext);
   const [myPosts, setMyPosts] = useState([]);
   const [editingPost, setEditingPost] = useState(null);
   const [error, setError] = useState(null);
@@ -59,32 +60,10 @@ function MyPosts() {
         formData.append('image_public_id', updatedPost.image_public_id);
       }
 
-      const response = await fetch(`/posts/${updatedPost.id}`, {
-        method: 'PUT',
-        body: formData,
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to update post');
-      }
-
-      const updatedData = await response.json();
-      
-      // Update posts in context
-      setPosts(prevPosts => 
-        prevPosts.map(post => 
-          post.id === updatedData.id ? updatedData : post
-        )
-      );
-
-      // Clear editing state
+      await updatePost(updatedPost.id, formData);
       setEditingPost(null);
       setError(null);
-
-      // Refresh the posts
-      await fetchAllPosts();
+      await fetchAllPosts(); // Refresh the posts after update
     } catch (error) {
       setError(`Failed to update post: ${error.message}`);
       console.error('Error updating post:', error);

@@ -1,9 +1,12 @@
+// PostContext.js
 import React, { createContext, useState, useEffect, useCallback } from 'react';
+import { UserContext } from './UserContext';
 
 export const PostContext = createContext();
 
 export const PostProvider = ({ children }) => {
   const [posts, setPosts] = useState([]);
+  const { fetchNotifications, user } = React.useContext(UserContext);
 
   const fetchAllPosts = useCallback(async () => {
     try {
@@ -25,6 +28,37 @@ export const PostProvider = ({ children }) => {
     setPosts(prevPosts => [newPost, ...prevPosts]);
   };
 
+  const updatePost = async (postId, updatedPostData) => {
+    try {
+      const response = await fetch(`/posts/${postId}`, {
+        method: 'PUT',
+        body: updatedPostData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update post');
+      }
+
+      const updatedPost = await response.json();
+      setPosts(prevPosts => 
+        prevPosts.map(post => 
+          post.id === postId ? updatedPost : post
+        )
+      );
+
+      // Fetch new notifications after post update
+      if (user) {
+        await fetchNotifications(user.id);
+      }
+
+      return updatedPost;
+    } catch (error) {
+      console.error('Error updating post:', error);
+      throw error;
+    }
+  };
+
   const deletePost = async (postId) => {
     try {
       const response = await fetch(`/posts/${postId}`, { 
@@ -34,6 +68,10 @@ export const PostProvider = ({ children }) => {
       
       if (response.ok) {
         setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+        // Fetch new notifications after post deletion
+        if (user) {
+          await fetchNotifications(user.id);
+        }
       } else {
         throw new Error('Failed to delete post');
       }
@@ -49,7 +87,8 @@ export const PostProvider = ({ children }) => {
       setPosts, 
       addPost, 
       deletePost, 
-      fetchAllPosts 
+      fetchAllPosts,
+      updatePost 
     }}>
       {children}
     </PostContext.Provider>
