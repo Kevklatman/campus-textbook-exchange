@@ -1,4 +1,3 @@
-// src/components/App.js
 import React from "react";
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 import Navbar from "./NavBar";
@@ -13,24 +12,30 @@ import Watchlist from "../pages/Watchlist";
 import AccountDetails from "../pages/AccountDetails";
 import ProtectedRoute from "./ProtectedRoute";
 
+function AppContent() {
+  return (
+    <Router>
+      <div className="App">
+        <Navbar />
+        <Switch>
+          <Route exact path="/" component={Home} />
+          <Route path="/login" component={LoginAndRegister} />
+          <Route path="/posts/:postId" component={PostDetails} />
+          <ProtectedRoute path="/create-post" component={CreatePostPage} />
+          <ProtectedRoute path="/my-posts" component={MyPosts} />
+          <ProtectedRoute path="/watchlist" component={Watchlist} />
+          <ProtectedRoute path="/account" component={AccountDetails} />
+        </Switch>
+      </div>
+    </Router>
+  );
+}
+
 function App() {
   return (
     <UserProvider>
       <PostProvider>
-        <Router>
-          <div className="App">
-            <Navbar />
-            <Switch>
-              <Route exact path="/" component={Home} />
-              <Route path="/login" component={LoginAndRegister} />
-              <Route path="/posts/:postId" component={PostDetails} />
-              <ProtectedRoute path="/create-post" component={CreatePostPage} />
-              <ProtectedRoute path="/my-posts" component={MyPosts} />
-              <ProtectedRoute path="/watchlist" component={Watchlist} />
-              <ProtectedRoute path="/account" component={AccountDetails} />
-            </Switch>
-          </div>
-        </Router>
+        <AppContent />
       </PostProvider>
     </UserProvider>
   );

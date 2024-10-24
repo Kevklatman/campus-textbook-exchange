@@ -39,13 +39,6 @@ export function UserProvider({ children }) {
     if (csrfToken) {
       headers['X-CSRF-Token'] = csrfToken;
     }
-    const cookieToken = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('csrf_token='))
-      ?.split('=')[1];
-    if (cookieToken && !headers['X-CSRF-Token']) {
-      headers['X-CSRF-Token'] = cookieToken;
-    }
     return headers;
   }, [csrfToken]);
 
@@ -54,19 +47,9 @@ export function UserProvider({ children }) {
     let token = csrfToken;
     
     if (!token) {
-      const cookieToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrf_token='))
-        ?.split('=')[1];
-      
-      if (cookieToken) {
-        token = cookieToken;
-        setCsrfToken(cookieToken);
-      } else {
-        token = await fetchCsrfToken();
-        if (!token) {
-          throw new Error('Failed to obtain CSRF token');
-        }
+      token = await fetchCsrfToken();
+      if (!token) {
+        throw new Error('Failed to obtain CSRF token');
       }
     }
 
@@ -129,12 +112,21 @@ export function UserProvider({ children }) {
     }
   }, [makeRequest]);
 
-  // 5. Define checkSession after its dependencies are declared
-  const checkSession = useCallback(async () => {
+  // 5. Define checkSession after its dependencies
+  const checkSession = useCallback(async (retryCount = 3) => {
     try {
       const response = await makeRequest("/check_session");
-      if (response.ok) {
-        const userData = await response.json();
+      
+      if (!response.ok) {
+        if (response.status === 401 && retryCount > 0) {
+          await fetchCsrfToken();
+          return checkSession(retryCount - 1);
+        }
+        throw new Error('Session check failed');
+      }
+
+      const userData = await response.json();
+      if (userData && !userData.error) {
         setUser(userData);
         await Promise.all([
           fetchWatchlist(userData.id),
@@ -146,42 +138,42 @@ export function UserProvider({ children }) {
         setNotifications([]);
       }
     } catch (error) {
-      console.error("Authentication error:", error);
+      console.error("Session check error:", error);
       setUser(null);
       setWatchlistPosts([]);
       setNotifications([]);
     } finally {
       setLoading(false);
     }
-  }, [makeRequest, fetchWatchlist, fetchNotifications]);
+  }, [makeRequest, fetchCsrfToken, fetchWatchlist, fetchNotifications]);
 
   // 6. Initialize app with useEffect
   useEffect(() => {
+    let mounted = true;
+
     const initializeApp = async () => {
-      const cookieToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrf_token='))
-        ?.split('=')[1];
-      
-      if (cookieToken) {
-        setCsrfToken(cookieToken);
-      } else {
+      try {
+        setLoading(true);
         await fetchCsrfToken();
+        await checkSession();
+      } catch (error) {
+        console.error("Initialization error:", error);
+        setUser(null);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      await checkSession();
     };
 
     initializeApp();
 
-    const intervalId = setInterval(async () => {
-      await fetchCsrfToken();
-      await checkSession();
-    }, 5 * 60 * 1000);
-
-    return () => clearInterval(intervalId);
+    return () => {
+      mounted = false;
+    };
   }, [fetchCsrfToken, checkSession]);
 
-  // 7. Define auth and other functions that depend on makeRequest
+  // 7. Define remaining functions that depend on makeRequest
   const login = async (userData) => {
     try {
       const response = await makeRequest("/login", {
@@ -190,8 +182,7 @@ export function UserProvider({ children }) {
           email: userData.email,
           password: userData.password,
           remember: true
-        }),
-        headers: userData.headers  // Include any additional headers passed
+        })
       });
   
       if (response.ok) {
@@ -210,6 +201,7 @@ export function UserProvider({ children }) {
     }
   };
 
+  // Rest of your functions...
   const logout = async () => {
     try {
       const response = await makeRequest("/logout", {
@@ -220,8 +212,6 @@ export function UserProvider({ children }) {
         setUser(null);
         setWatchlistPosts([]);
         setNotifications([]);
-      } else {
-        console.error("Logout failed:", await response.text());
       }
     } catch (error) {
       console.error("Logout error:", error);
@@ -245,65 +235,69 @@ export function UserProvider({ children }) {
     }
   };
 
-  const removeFromWatchlist = async (postId) => {
-    if (!user) return;
-    try {
-      const response = await makeRequest(`/users/${user.id}/watchlist/${postId}`, {
-        method: 'DELETE'
-      });
+  // Add these functions after addToWatchlist and before the return statement:
 
-      if (response.ok) {
-        setWatchlistPosts((prevWatchlist) => 
-          prevWatchlist.filter((post) => post.id !== postId)
-        );
-      }
-    } catch (error) {
-      console.error('Error removing from watchlist:', error);
+const removeFromWatchlist = async (postId) => {
+  if (!user) return;
+  try {
+    const response = await makeRequest(`/users/${user.id}/watchlist/${postId}`, {
+      method: 'DELETE'
+    });
+
+    if (response.ok) {
+      setWatchlistPosts((prevWatchlist) => 
+        prevWatchlist.filter((post) => post.id !== postId)
+      );
     }
-  };
+  } catch (error) {
+    console.error('Error removing from watchlist:', error);
+  }
+};
 
-  const markNotificationAsRead = async (notificationId) => {
-    try {
-      const response = await makeRequest(`/notifications/${notificationId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ read: true })
-      });
+const markNotificationAsRead = async (notificationId) => {
+  try {
+    const response = await makeRequest(`/notifications/${notificationId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ read: true })
+    });
 
-      if (response.ok) {
-        setNotifications(prev => 
-          prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
-        );
-      }
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
+    if (response.ok) {
+      setNotifications(prev => 
+        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      );
     }
-  };
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+  }
+};
 
-  const markAllNotificationsAsRead = async () => {
-    if (!user) return;
-    try {
-      const response = await makeRequest(`/users/${user.id}/notifications`, {
-        method: 'PATCH'
-      });
+const markAllNotificationsAsRead = async () => {
+  if (!user) return;
+  try {
+    const response = await makeRequest(`/users/${user.id}/notifications`, {
+      method: 'PATCH'
+    });
 
-      if (response.ok) {
-        setNotifications(prev => 
-          prev.map(notification => ({ ...notification, read: true }))
-        );
-      }
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+    if (response.ok) {
+      setNotifications(prev => 
+        prev.map(notification => ({ ...notification, read: true }))
+      );
     }
-  };
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+  }
+};
 
-  const refreshUserData = async () => {
-    if (user) {
-      await Promise.all([
-        fetchWatchlist(user.id),
-        fetchNotifications(user.id)
-      ]);
-    }
-  };
+const refreshUserData = async () => {
+  if (user) {
+    await Promise.all([
+      fetchWatchlist(user.id),
+      fetchNotifications(user.id)
+    ]);
+  }
+};
+
+  // Include your other functions here...
 
   return (
     <UserContext.Provider value={{

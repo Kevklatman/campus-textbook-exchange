@@ -516,14 +516,24 @@ class LogoutResource(Resource):
 
 class CheckSessionResource(Resource):
     def get(self):
-        if current_user.is_authenticated or 'user_id' in session:
+        try:
+            # First check if user is authenticated through flask_login
+            if current_user.is_authenticated:
+                return current_user.to_dict(), 200
+            
+            # Then check if we have a valid session
             if 'user_id' in session:
                 user = User.query.get(session['user_id'])
                 if user:
                     login_user(user, remember=True)
+                    session.permanent = True  # Make the session permanent
                     return user.to_dict(), 200
-            return current_user.to_dict(), 200
-        return {'error': '401 Unauthorized'}, 401
+            
+            return {'error': '401 Unauthorized'}, 401
+            
+        except Exception as e:
+            logger.error(f"Error in check_session: {str(e)}")
+            return {'error': 'Internal Server Error'}, 500
 
 class SignupResource(Resource):
     def post(self):

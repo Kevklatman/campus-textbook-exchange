@@ -13,6 +13,7 @@ from flask_mail import Mail
 import cloudinary
 from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
 from datetime import timedelta
+from flask_session import Session
 
 # Generate strong secret keys
 SECRET_KEY = secrets.token_hex(32)
@@ -21,7 +22,7 @@ WTF_CSRF_SECRET_KEY = secrets.token_hex(32)
 # Instantiate app
 app = Flask(__name__)
 
-# Critical Security Configuration
+# All configuration settings in one app.config.update call
 app.config.update(
     # Secret keys
     SECRET_KEY=SECRET_KEY,
@@ -31,19 +32,20 @@ app.config.update(
     SQLALCHEMY_DATABASE_URI='sqlite:///app.db',
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
     
-    # Session settings
-    SESSION_COOKIE_SECURE=False,
+    # Enhanced Session settings
+    SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
     PERMANENT_SESSION_LIFETIME=timedelta(days=7),
     SESSION_REFRESH_EACH_REQUEST=True,
     SESSION_COOKIE_PATH='/',
+    SESSION_TYPE='filesystem',
     
     # CSRF settings
     WTF_CSRF_ENABLED=True,
     WTF_CSRF_CHECK_DEFAULT=True,
-    WTF_CSRF_TIME_LIMIT=None,
-    WTF_CSRF_SSL_STRICT=True,
+    WTF_CSRF_TIME_LIMIT=None,  # Remove CSRF token timeout
+    WTF_CSRF_SSL_STRICT=False,  # Set to True in production
     WTF_CSRF_METHODS={'POST', 'PUT', 'PATCH', 'DELETE'},
 
     # Upload settings
@@ -65,6 +67,9 @@ app.config.update(
 )
 
 app.json.compact = False
+
+# Initialize Flask-Session
+Session(app)
 
 # Define metadata with naming convention
 metadata = MetaData(naming_convention={
@@ -91,8 +96,6 @@ CORS(app, resources={
     }
 })
 
-
-
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
 csrf.exempt('csrf_token')  # Exempt the token route
@@ -114,8 +117,3 @@ cloudinary.config(
 )
 
 CLOUDINARY_UPLOAD_PRESET = "unsigned"
-
-
-
-
-
