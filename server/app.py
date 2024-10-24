@@ -120,99 +120,82 @@ class PostResource(Resource):
             return {"message": f"Error creating post: {str(e)}"}, 500
 
     def put(self, post_id):
-        print(f"Attempting to update post with id: {post_id}")
-        post = Post.query.get(post_id)
-        if not post:
-            print(f"Post with id {post_id} not found")
-            return {"message": "Post not found"}, 404
+            print(f"Received PUT request for post {post_id}")
+            try:
+                if not current_user.is_authenticated:
+                    print("User not authenticated")
+                    return {"message": "Authentication required"}, 401
 
-        if post.user_id != current_user.id:
-            return {"message": "Unauthorized"}, 401
+                post = Post.query.get(post_id)
+                if not post:
+                    print(f"Post {post_id} not found")
+                    return {"message": "Post not found"}, 404
 
-        data = request.form
-        print("Received data:", data)
+                if post.user_id != current_user.id:
+                    print(f"Unauthorized attempt to edit post {post_id}")
+                    return {"message": "Unauthorized"}, 401
 
-        if not data:
-            print("No input data provided")
-            return {"message": "No input data provided"}, 400
+                data = request.form
+                if not data:
+                    print("No input data provided")
+                    return {"message": "No input data provided"}, 400
 
-        try:
-            # Store original price for comparison
-            original_price = float(post.price)
-
-            # Update post fields
-            post.price = data.get('price', post.price)
-            post.condition = data.get('condition', post.condition)
-
-            # Update textbook fields
-            textbook = post.textbook
-            textbook.title = data.get('title', textbook.title)
-            textbook.author = data.get('author', textbook.author)
-            textbook.subject = data.get('subject', textbook.subject)
-            
-            if 'isbn' in data:
-                try:
-                    isbn = int(data['isbn'])
-                    Textbook.validate_isbn(isbn)
-                    textbook.isbn = isbn
-                except ValueError as e:
-                    return {"message": str(e)}, 400
-
-            # Handle image update
-            image_public_id = data.get('image_public_id')
-            if image_public_id:
-                post.img = image_public_id
-
-            # Check for price drop and create notifications
-            new_price = float(post.price)
-            if new_price < original_price:
-                watchlist_items = Watchlist.query.filter_by(post_id=post_id).all()
-                for item in watchlist_items:
-                    # First, check how many notifications the user has
-                    existing_notifications = Notification.query\
-                        .filter_by(user_id=item.user_id)\
-                        .order_by(Notification.created_at.desc())\
-                        .all()
-                    
-                    # Create the new notification
-                    notification = Notification(
-                        user_id=item.user_id,
-                        post_id=post_id,
-                        message=f"Price dropped for {post.textbook.title} from ${original_price:.2f} to ${new_price:.2f}!"
-                    )
-                    db.session.add(notification)
-                    
-                    # If we'll exceed the limit, remove the oldest notifications
-                    if len(existing_notifications) >= 3:  # Using 3 as the limit
-                        # Keep only the 2 most recent to make room for the new one
-                        notifications_to_delete = existing_notifications[2:]
-                        for old_notification in notifications_to_delete:
-                            db.session.delete(old_notification)
-                    
-                    # Also send email notification
-                    user = User.query.get(item.user_id)
-                    if user:
-                        subject = f"Price Drop Alert: {post.textbook.title}"
-                        body = f"The price of {post.textbook.title} has dropped from ${original_price:.2f} to ${new_price:.2f}. Check it out now!"
-                        recipients = [user.email]
-                        try:
-                            send_email(subject, recipients, body)
-                        except Exception as e:
-                            print(f"Error sending email notification: {str(e)}")
-
-            db.session.commit()
-
-            post_data = post.to_dict()
-            post_data['textbook'] = textbook.to_dict()
-            post_data['image_url'] = post.image_url
-
-            print("Returning updated post data:", post_data)
-            return post_data, 200
+                print(f"Processing update for post {post_id} with data: {data}")
                 
-        except Exception as e:
-            db.session.rollback()
-            print("Error updating post:", str(e))
-            return {"message": "Error updating post", "error": str(e)}, 500
+                # Store original price for comparison
+                original_price = float(post.price)
+
+                # Update post fields
+                post.price = data.get('price', post.price)
+                post.condition = data.get('condition', post.condition)
+
+                # Update textbook fields
+                textbook = post.textbook
+                textbook.title = data.get('title', textbook.title)
+                textbook.author = data.get('author', textbook.author)
+                textbook.subject = data.get('subject', textbook.subject)
+                
+                if 'isbn' in data:
+                    try:
+                        isbn = int(data['isbn'])
+                        Textbook.validate_isbn(isbn)
+                        textbook.isbn = isbn
+                    except ValueError as e:
+                        print(f"Invalid ISBN: {str(e)}")
+                        return {"message": str(e)}, 400
+
+                # Handle image update
+                image_public_id = data.get('image_public_id')
+                if image_public_id:
+                    post.img = image_public_id
+
+                # Process notifications for price changes
+                new_price = float(post.price)
+                if new_price < original_price:
+                    watchlist_items = Watchlist.query.filter_by(post_id=post_id).all()
+                    for item in watchlist_items:
+                        notification = Notification(
+                            user_id=item.user_id,
+                            post_id=post_id,
+                            message=f"Price dropped for {post.textbook.title} from ${original_price:.2f} to ${new_price:.2f}!"
+                        )
+                        db.session.add(notification)
+
+                db.session.commit()
+                print(f"Successfully updated post {post_id}")
+
+                # Return the full post data with associations
+                post_data = post.to_dict()
+                post_data['textbook'] = textbook.to_dict()
+                post_data['user'] = current_user.to_dict()
+                post_data['image_url'] = post.image_url
+
+                return post_data, 200
+                    
+            except Exception as e:
+                db.session.rollback()
+                print(f"Error updating post {post_id}: {str(e)}")
+                return {"message": f"Error updating post: {str(e)}"}, 500
     
     def delete(self, post_id):
         post = Post.query.get(post_id)
@@ -434,11 +417,10 @@ class LogoutResource(Resource):
         logout_user()
         session.clear()
         
-        # Create a response to clear the remember cookie
-        response = Response({"message": "Logged out successfully"}, 200)
-        # Clear the remember cookie
-        response.set_cookie('remember_token', '', expires=0)  # Expire the remember token
-        return response
+        response = make_response({"message": "Logged out successfully"})
+        response.delete_cookie('session')
+        response.delete_cookie('remember_token')
+        return response, 200
 
 class CheckSessionResource(Resource):
     def get(self):
@@ -496,7 +478,7 @@ class LoginResource(Resource):
 
         email = data.get('email')
         password = data.get('password')
-        remember = data.get('remember', False)  # Add this line
+        remember = data.get('remember', False)
 
         if not email or not password:
             logger.warning("Email or password missing in login attempt")
@@ -505,9 +487,13 @@ class LoginResource(Resource):
         user = User.query.filter_by(email=email).first()
 
         if user and user.authenticate(password):
-            login_user(user, remember=remember)  # Add remember parameter
+            login_user(user, remember=remember)
+            if remember:
+                # Set permanent session when "remember me" is checked
+                session.permanent = True
             logger.info(f"User {email} logged in successfully with remember={remember}")
-            return user.to_dict(), 200
+            response = make_response(user.to_dict())
+            return response, 200
         else:
             logger.warning(f"Failed login attempt for user: {email}")
             return {"message": "Invalid email or password"}, 401

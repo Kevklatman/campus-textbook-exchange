@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback } from "react";
+import { useHistory } from 'react-router-dom';
 
 export const UserContext = createContext();
 
@@ -7,10 +8,13 @@ export function UserProvider({ children }) {
   const [watchlistPosts, setWatchlistPosts] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const history = useHistory();
 
   const fetchWatchlist = useCallback(async (userId) => {
     try {
-      const response = await fetch(`/users/${userId}/watchlist`);
+      const response = await fetch(`/users/${userId}/watchlist`, {
+        credentials: 'include'
+      });
       if (response.ok) {
         const watchlistData = await response.json();
         setWatchlistPosts(watchlistData || []);
@@ -23,7 +27,9 @@ export function UserProvider({ children }) {
 
   const fetchNotifications = useCallback(async (userId) => {
     try {
-      const response = await fetch(`/users/${userId}/notifications`);
+      const response = await fetch(`/users/${userId}/notifications`, {
+        credentials: 'include'
+      });
       if (response.ok) {
         const notificationsData = await response.json();
         setNotifications(notificationsData || []);
@@ -35,42 +41,74 @@ export function UserProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    // Check if user is logged in
-    fetch("/check_session")
-      .then((res) => {
-        if (res.ok) {
-          return res.json();
-        } else {
-          throw new Error('Not authenticated');
+    const checkSession = async () => {
+      try {
+        const response = await fetch("/check_session", {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+          if (userData.id) {
+            await fetchWatchlist(userData.id);
+            await fetchNotifications(userData.id);
+          }
         }
-      })
-      .then((userData) => {
-        setUser(userData);
-        fetchWatchlist(userData.id);
-        fetchNotifications(userData.id);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Authentication error:", error);
+      } catch (error) {
+        console.error("Session check error:", error);
         setUser(null);
         setWatchlistPosts([]);
         setNotifications([]);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    checkSession();
   }, [fetchWatchlist, fetchNotifications]);
 
-  const login = (userData) => {
-    setUser(userData);
-    fetchWatchlist(userData.id);
-    fetchNotifications(userData.id);
+  const login = async (userData) => {
+    try {
+      const response = await fetch("/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: 'include',
+        body: JSON.stringify(userData),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data);
+        if (data.id) {
+          await fetchWatchlist(data.id);
+          await fetchNotifications(data.id);
+        }
+        history.push('/');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Login error:", error);
+      return false;
+    }
   };
 
   const logout = async () => {
     try {
-      await fetch("/logout", { method: "POST" });
-      setUser(null);
-      setWatchlistPosts([]);
-      setNotifications([]);
+      const response = await fetch("/logout", {
+        method: "POST",
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        setUser(null);
+        setWatchlistPosts([]);
+        setNotifications([]);
+        history.push('/login');
+      }
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -84,6 +122,7 @@ export function UserProvider({ children }) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ post_id: postId, textbook_id: textbookId }),
       });
 
@@ -99,12 +138,16 @@ export function UserProvider({ children }) {
   const removeFromWatchlist = async (postId) => {
     if (!user) return;
     try {
-      await fetch(`/users/${user.id}/watchlist/${postId}`, {
+      const response = await fetch(`/users/${user.id}/watchlist/${postId}`, {
         method: 'DELETE',
+        credentials: 'include'
       });
-      setWatchlistPosts((prevWatchlist) => 
-        prevWatchlist.filter((post) => post.id !== postId)
-      );
+      
+      if (response.ok) {
+        setWatchlistPosts((prevWatchlist) => 
+          prevWatchlist.filter((post) => post.id !== postId)
+        );
+      }
     } catch (error) {
       console.error('Error removing from watchlist:', error);
     }
@@ -117,6 +160,7 @@ export function UserProvider({ children }) {
         headers: {
           'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({ read: true })
       });
 
@@ -137,7 +181,8 @@ export function UserProvider({ children }) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include'
       });
 
       if (response.ok) {
@@ -148,7 +193,7 @@ export function UserProvider({ children }) {
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
-};
+  };
 
   return (
     <UserContext.Provider value={{
@@ -156,6 +201,7 @@ export function UserProvider({ children }) {
       setUser,
       login,
       logout,
+      loading,
       watchlistPosts,
       addToWatchlist,
       removeFromWatchlist,
@@ -169,3 +215,5 @@ export function UserProvider({ children }) {
     </UserContext.Provider>
   );
 }
+
+export default UserContext;

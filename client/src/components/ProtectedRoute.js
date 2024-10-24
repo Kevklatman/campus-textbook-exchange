@@ -1,16 +1,24 @@
-// src/components/ProtectedRoute.js
+// ProtectedRoute.js
 import React, { useContext } from 'react';
 import { Route, Redirect } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
 
 function ProtectedRoute({ component: Component, ...rest }) {
-  const { user } = useContext(UserContext);
+  const { user, loading } = useContext(UserContext);
 
   return (
     <Route
       {...rest}
-      render={props =>
-        user ? (
+      render={props => {
+        if (loading) {
+          return (
+            <div className="loading-container">
+              <div className="loading-spinner">Loading...</div>
+            </div>
+          );
+        }
+        
+        return user ? (
           <Component {...props} />
         ) : (
           <Redirect
@@ -19,8 +27,8 @@ function ProtectedRoute({ component: Component, ...rest }) {
               state: { from: props.location }
             }}
           />
-        )
-      }
+        );
+      }}
     />
   );
 }

@@ -71,3 +71,14 @@ cloudinary.config(
 )
 
 CLOUDINARY_UPLOAD_PRESET = "unsigned"
+
+from datetime import timedelta
+
+app.config.update(
+    SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
+    REMEMBER_COOKIE_DURATION=timedelta(days=7),
+    REMEMBER_COOKIE_HTTPONLY=True,
+)

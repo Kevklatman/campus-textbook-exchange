@@ -7,7 +7,9 @@ export const PostProvider = ({ children }) => {
 
   const fetchAllPosts = useCallback(async () => {
     try {
-      const response = await fetch('/posts');
+      const response = await fetch('/posts', {
+        credentials: 'include'
+      });
       const data = await response.json();
       setPosts(data);
     } catch (error) {
@@ -23,39 +25,32 @@ export const PostProvider = ({ children }) => {
     setPosts(prevPosts => [newPost, ...prevPosts]);
   };
 
-  const updatePost = useCallback(async (updatedPost) => {
-    try {
-      const response = await fetch(`/posts/${updatedPost.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedPost),
-      });
-      if (response.ok) {
-        const updatedPostData = await response.json();
-        setPosts((prevPosts) =>
-          prevPosts.map((post) => (post.id === updatedPostData.id ? updatedPostData : post))
-        );
-      } else {
-        throw new Error('Error updating post');
-      }
-    } catch (error) {
-      console.error('Error updating post:', error);
-    }
-  }, []);
-
   const deletePost = async (postId) => {
     try {
-      await fetch(`/posts/${postId}`, { method: 'DELETE' });
-      setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+      const response = await fetch(`/posts/${postId}`, { 
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+      } else {
+        throw new Error('Failed to delete post');
+      }
     } catch (error) {
       console.error('Error deleting post:', error);
+      throw error;
     }
   };
 
   return (
-    <PostContext.Provider value={{ posts, setPosts, addPost, updatePost, deletePost, fetchAllPosts }}>
+    <PostContext.Provider value={{ 
+      posts, 
+      setPosts, 
+      addPost, 
+      deletePost, 
+      fetchAllPosts 
+    }}>
       {children}
     </PostContext.Provider>
   );

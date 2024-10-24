@@ -1,10 +1,10 @@
-// src/components/App.js
+// App.js
 import React from "react";
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
-import Navbar from "./NavBar";
-import LoginAndRegister from "../pages/LoginAndRegister";
 import { UserProvider } from "../contexts/UserContext";
 import { PostProvider } from "../contexts/PostContext";
+import Navbar from "./NavBar";
+import LoginAndRegister from "../pages/LoginAndRegister";
 import Home from "../pages/Home";
 import CreatePostPage from "../pages/CreatePostPage";
 import MyPosts from "../pages/MyPosts";
@@ -15,9 +15,9 @@ import ProtectedRoute from "./ProtectedRoute";
 
 function App() {
   return (
-    <UserProvider>
-      <PostProvider>
-        <Router>
+    <Router>
+      <UserProvider>
+        <PostProvider>
           <div className="App">
             <Navbar />
             <Switch>
@@ -30,9 +30,9 @@ function App() {
               <ProtectedRoute path="/account" component={AccountDetails} />
             </Switch>
           </div>
-        </Router>
-      </PostProvider>
-    </UserProvider>
+        </PostProvider>
+      </UserProvider>
+    </Router>
   );
 }
 
