@@ -55,19 +55,19 @@ app.config.update(
     MAIL_USE_TLS=False,
     MAIL_USE_SSL=True,
     MAIL_USERNAME='campustextbookexchange@gmail.com',
-    MAIL_PASSWORD='bkrb couo vrqn gdsq',  # Consider moving to environment variable
+    MAIL_PASSWORD='bkrb couo vrqn gdsq',  
     MAIL_DEFAULT_SENDER='campustextbookexchange@gmail.com'
 )
 mail = Mail(app)
 
 # Secret key configuration
-app.secret_key = 'your_secret_key_here'  # Consider moving to environment variable
+app.secret_key = 'your_secret_key_here'  
 
 # Cloudinary configuration
 cloudinary.config(
     cloud_name="duhjluee1",
     api_key="247538451127763",
-    api_secret="oP9Qkj-5_o8fk8SGx0A8pybDtGs"  # Consider moving to environment variable
+    api_secret="oP9Qkj-5_o8fk8SGx0A8pybDtGs"  
 )
 
 CLOUDINARY_UPLOAD_PRESET = "unsigned"

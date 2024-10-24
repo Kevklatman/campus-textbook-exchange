@@ -58,7 +58,6 @@ function CreatePost({ onNewPostCreated }) {
       setSubject(textbook.subject);
     }
     setShowSelector(false);
-    // Clear any existing errors for these fields
     setErrors(prev => ({
       ...prev,
       author: null,

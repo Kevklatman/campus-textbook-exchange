@@ -53,7 +53,6 @@ const logout = async () => {
     await fetch("/logout", { method: "POST" });
     setUser(null);
     setWatchlistPosts([]);
-    // Clear any other user-related state here
   } catch (error) {
     console.error("Logout error:", error);
   }

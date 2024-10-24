@@ -405,9 +405,7 @@ class LogoutResource(Resource):
         logout_user()
         session.clear()
         
-        # Create a response to clear the remember cookie
         response = Response({"message": "Logged out successfully"}, 200)
-        # Clear the remember cookie
         response.set_cookie('remember_token', '', expires=0)  # Expire the remember token
         return response
 
