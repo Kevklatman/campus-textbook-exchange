@@ -91,6 +91,8 @@ CORS(app, resources={
     }
 })
 
+
+
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
 csrf.exempt('csrf_token')  # Exempt the token route

@@ -91,7 +91,6 @@ function LoginAndRegister() {
     setError(null);
     setIsSubmitting(true);
     try {
-      // Get the CSRF token from the cookie
       const token = document.cookie
         .split('; ')
         .find(row => row.startsWith('csrf_token='))
@@ -118,20 +117,10 @@ function LoginAndRegister() {
         return;
       }
 
-      // Try to log in with the new credentials
-      const loginSuccess = await login({
-        email: values.email,
-        password: values.password,
-        headers: {
-          'X-CSRF-Token': token || csrfToken
-        }
-      });
+      // User is now automatically logged in from the backend
+      // Just redirect to home page
+      history.push("/");
 
-      if (loginSuccess) {
-        history.push("/");
-      } else {
-        throw new Error("Registration successful but login failed");
-      }
     } catch (error) {
       console.error("Registration error:", error);
       setError(error.message || "An error occurred during registration");

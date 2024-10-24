@@ -59,34 +59,36 @@ def get_csrf_token():
     return response
 
 @app.before_request
-def before_request():
-    # Enable session persistence
-    session.permanent = True
-    app.permanent_session_lifetime = timedelta(days=7)
-    
-    # Regenerate CSRF token if needed
-    if 'csrf_token' not in session:
-        session['csrf_token'] = generate_csrf()
+def csrf_protect():
+    if request.method not in ['GET', 'HEAD', 'OPTIONS']:
+        # Check if we have a token in the session
+        if 'csrf_token' not in session:
+            token = generate_csrf()
+            session['csrf_token'] = token
 
 @app.after_request
 def after_request(response):
+    # Ensure CSRF token cookie is set
     if 'csrf_token' not in request.cookies:
-        token = generate_csrf()
+        token = session.get('csrf_token', generate_csrf())
         response.set_cookie(
             'csrf_token',
             token,
             secure=True,
             httponly=False,
             samesite='Lax',
-            path='/',
-            max_age=3600
+            path='/'
         )
+    
+    # Set CORS headers
     response.headers.update({
         'Access-Control-Allow-Origin': 'http://localhost:3000',
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Expose-Headers': 'X-CSRF-Token'
     })
+    
     return response
 
 @app.errorhandler(CSRFError)
@@ -524,15 +526,9 @@ class CheckSessionResource(Resource):
         return {'error': '401 Unauthorized'}, 401
 
 class SignupResource(Resource):
-    decorators = [csrf.exempt]  # Temporarily exempt to debug
-
     def post(self):
         try:
             data = request.get_json()
-            print("Received data:", data)  # Debug print
-            print("CSRF Token from headers:", request.headers.get('X-CSRF-Token'))  # Debug print
-            print("CSRF Token from session:", session.get('csrf_token'))  # Debug print
-            
             if not data:
                 logger.warning("No input data provided for signup")
                 return {"message": "No input data provided"}, 400
@@ -560,10 +556,8 @@ class SignupResource(Resource):
 
             db.session.add(new_user)
             db.session.commit()
-            login_user(new_user)
-            logger.info(f"New user signed up and logged in: {email}")
             
-            # Generate new CSRF token after signup
+            # Generate new token and set up the response
             token = generate_csrf()
             response = make_response(new_user.to_dict(), 201)
             response.set_cookie(
@@ -574,6 +568,13 @@ class SignupResource(Resource):
                 samesite='Lax',
                 path='/'
             )
+            
+            # Log in the user
+            login_user(new_user, remember=True)
+            session['user_id'] = new_user.id
+            session['csrf_token'] = token
+
+            logger.info(f"New user signed up and logged in: {email}")
             return response
 
         except Exception as e:
@@ -584,7 +585,6 @@ class SignupResource(Resource):
 
 
 class LoginResource(Resource):
-    method_decorators = [csrf_token_required]  # Add CSRF protection
     def post(self):
         data = request.get_json()
         
@@ -594,7 +594,7 @@ class LoginResource(Resource):
 
         email = data.get('email')
         password = data.get('password')
-        remember = data.get('remember', True)  # Default to True for persistence
+        remember = data.get('remember', True)
 
         if not email or not password:
             logger.warning("Email or password missing in login attempt")
@@ -606,19 +606,20 @@ class LoginResource(Resource):
             login_user(user, remember=remember)
             session.permanent = True
             session['user_id'] = user.id
-            session['email'] = user.email
+            
+            # Generate new CSRF token
+            token = generate_csrf()
+            session['csrf_token'] = token
             
             response = make_response(user.to_dict(), 200)
-            # Set secure cookie attributes
             response.set_cookie(
-                'session',
-                value=session.get('session', ''),
-                max_age=60 * 60 * 24 * 7,  # 7 days
-                path='/',
-                domain=None,
+                'csrf_token',
+                token,
                 secure=True,
-                httponly=True,
-                samesite='Lax'
+                httponly=False,
+                samesite='Lax',
+                path='/',
+                max_age=3600
             )
             return response
         else:
