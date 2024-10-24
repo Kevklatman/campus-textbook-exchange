@@ -11,7 +11,9 @@ from cloudinary.uploader import upload
 from cloudinary.utils import cloudinary_url
 from flask import session
 from datetime import timedelta
-from flask_wtf.csrf import generate_csrf
+from flask_wtf.csrf import generate_csrf, CSRFError
+from functools import wraps
+
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -30,9 +32,78 @@ def send_email(subject, recipients, body):
     msg.body = body
     mail.send(msg)
 
+def csrf_token_required(view_func):
+    @wraps(view_func)
+    def wrapped(*args, **kwargs):
+        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
+            token = request.headers.get('X-CSRF-Token')
+            if not token:
+                return jsonify({'error': 'CSRF token missing'}), 400
+        return view_func(*args, **kwargs)
+    return wrapped
+
+@app.route('/csrf_token', methods=['GET'])
+@csrf.exempt
+def get_csrf_token():
+    token = generate_csrf()
+    response = make_response(jsonify({'csrf_token': token}))
+    response.set_cookie(
+        'csrf_token',
+        token,
+        secure=True,
+        httponly=False,
+        samesite='Lax',
+        path='/',
+        max_age=3600  # 1 hour expiration
+    )
+    return response
+
+@app.before_request
+def before_request():
+    # Enable session persistence
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(days=7)
+    
+    # Regenerate CSRF token if needed
+    if 'csrf_token' not in session:
+        session['csrf_token'] = generate_csrf()
+
+@app.after_request
+def after_request(response):
+    if 'csrf_token' not in request.cookies:
+        token = generate_csrf()
+        response.set_cookie(
+            'csrf_token',
+            token,
+            secure=True,
+            httponly=False,
+            samesite='Lax',
+            path='/',
+            max_age=3600
+        )
+    response.headers.update({
+        'Access-Control-Allow-Origin': 'http://localhost:3000',
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+    })
+    return response
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    return jsonify({
+        'error': 'CSRF token validation failed',
+        'message': str(e),
+        'status': 'error'
+    }), 400
+
+
 @app.route('/')
 def index():
     return '<h1>Project Server</h1>'
+
+
+
 class PostResource(Resource):
 
     def get(self, post_id=None):
@@ -436,65 +507,84 @@ class LogoutResource(Resource):
     def post(self):
         logout_user()
         session.clear()
-        
-        # Create a response to clear the remember cookie
         response = Response({"message": "Logged out successfully"}, 200)
-        # Clear the remember cookie
-        response.set_cookie('remember_token', '', expires=0)  # Expire the remember token
+        response.delete_cookie('session')
+        response.delete_cookie('remember_token')
         return response
 
 class CheckSessionResource(Resource):
     def get(self):
-        if current_user.is_authenticated:
+        if current_user.is_authenticated or 'user_id' in session:
+            if 'user_id' in session:
+                user = User.query.get(session['user_id'])
+                if user:
+                    login_user(user, remember=True)
+                    return user.to_dict(), 200
             return current_user.to_dict(), 200
         return {'error': '401 Unauthorized'}, 401
 
 class SignupResource(Resource):
+    decorators = [csrf.exempt]  # Temporarily exempt to debug
+
     def post(self):
-        data = request.get_json()
-        if not data:
-            logger.warning("No input data provided for signup")
-            return {"message": "No input data provided"}, 400
-
-        email = data.get('email')
-        password = data.get('password')
-        name = data.get('name')
-
-        if not email or not password:
-            logger.warning("Email or password missing in signup attempt")
-            return {"message": "Email and password are required"}, 400
-
         try:
-            User.validate_email_format(email)
-        except ValueError as e:
-            logger.warning(f"Invalid email format in signup attempt: {email}")
-            return {"message": str(e)}, 400
+            data = request.get_json()
+            print("Received data:", data)  # Debug print
+            print("CSRF Token from headers:", request.headers.get('X-CSRF-Token'))  # Debug print
+            print("CSRF Token from session:", session.get('csrf_token'))  # Debug print
+            
+            if not data:
+                logger.warning("No input data provided for signup")
+                return {"message": "No input data provided"}, 400
 
-        if User.query.filter_by(email=email).first():
-            logger.warning(f"Signup attempt with existing email: {email}")
-            return {"message": "Email already exists"}, 400
+            email = data.get('email')
+            password = data.get('password')
+            name = data.get('name')
 
-        new_user = User(email=email, name=name)
-        new_user.password_hash = password  # This will use the setter method to hash the password
+            if not email or not password:
+                logger.warning("Email or password missing in signup attempt")
+                return {"message": "Email and password are required"}, 400
 
-        try:
+            try:
+                User.validate_email_format(email)
+            except ValueError as e:
+                logger.warning(f"Invalid email format in signup attempt: {email}")
+                return {"message": str(e)}, 400
+
+            if User.query.filter_by(email=email).first():
+                logger.warning(f"Signup attempt with existing email: {email}")
+                return {"message": "Email already exists"}, 400
+
+            new_user = User(email=email, name=name)
+            new_user.password_hash = password
+
             db.session.add(new_user)
             db.session.commit()
             login_user(new_user)
             logger.info(f"New user signed up and logged in: {email}")
-            return new_user.to_dict(), 201
+            
+            # Generate new CSRF token after signup
+            token = generate_csrf()
+            response = make_response(new_user.to_dict(), 201)
+            response.set_cookie(
+                'csrf_token',
+                token,
+                secure=True,
+                httponly=False,
+                samesite='Lax',
+                path='/'
+            )
+            return response
+
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error during user signup: {str(e)}")
             return {"message": f"An error occurred while creating the user: {str(e)}"}, 500
 
 
-@app.before_request
-def before_request():
-    session.permanent = True  # Enable permanent session
-    app.permanent_session_lifetime = timedelta(days=7)
 
 class LoginResource(Resource):
+    method_decorators = [csrf_token_required]  # Add CSRF protection
     def post(self):
         data = request.get_json()
         
@@ -504,7 +594,7 @@ class LoginResource(Resource):
 
         email = data.get('email')
         password = data.get('password')
-        remember = data.get('remember', False)
+        remember = data.get('remember', True)  # Default to True for persistence
 
         if not email or not password:
             logger.warning("Email or password missing in login attempt")
@@ -514,10 +604,7 @@ class LoginResource(Resource):
 
         if user and user.authenticate(password):
             login_user(user, remember=remember)
-            if remember:
-                # Set permanent session
-                session.permanent = True
-            # Store user info in session
+            session.permanent = True
             session['user_id'] = user.id
             session['email'] = user.email
             
@@ -525,23 +612,20 @@ class LoginResource(Resource):
             # Set secure cookie attributes
             response.set_cookie(
                 'session',
-                domain=None,  # Restrict to same domain
-                secure=True,  # Require HTTPS
-                httponly=True,  # Prevent JavaScript access
-                samesite='Lax'  # CSRF protection
+                value=session.get('session', ''),
+                max_age=60 * 60 * 24 * 7,  # 7 days
+                path='/',
+                domain=None,
+                secure=True,
+                httponly=True,
+                samesite='Lax'
             )
             return response
         else:
             logger.warning(f"Failed login attempt for user: {email}")
             return {"message": "Invalid email or password"}, 401
 
-@app.after_request
-def after_request(response):
-    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '-1'
-    return response
-    
+
 class NotificationResource(Resource):
     MAX_NOTIFICATIONS = 3  
 
@@ -594,27 +678,10 @@ class NotificationResource(Resource):
 
         
 
-# Add CSRF token endpoint
-@app.route('/csrf_token')
-def csrf_token():
-    token = generate_csrf()
-    response = jsonify({'csrf_token': token})
-    return response
 
-# Optional: Set CSRF token in cookie for JS to access
-@app.after_request
-def add_csrf_cookie(response):
-    if 'csrf_token' not in request.cookies:
-        response.set_cookie('csrf_token', generate_csrf(),
-                          secure=True,  # Requires HTTPS
-                          httponly=False,  # Allows JavaScript access
-                          samesite='Strict')  # CSRF protection
-    return response
 
-# Update error handler to handle CSRF errors
-@app.errorhandler(CSRFError)
-def handle_csrf_error(e):
-    return jsonify({'error': 'CSRF token is missing or invalid'}), 400
+
+
 
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
 api.add_resource(TextbookResource, '/textbooks', '/textbooks/<int:textbook_id>')

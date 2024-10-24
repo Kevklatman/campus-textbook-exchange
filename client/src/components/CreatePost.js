@@ -2,10 +2,12 @@ import React, { useState, useContext, useEffect } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { PostContext } from '../contexts/PostContext';
 import TextbookSelector from './TextbookSelector';
+import { useHistory } from 'react-router-dom';
 
 function CreatePost({ onNewPostCreated }) {
-  const { user } = useContext(UserContext);
+  const { user, csrfToken } = useContext(UserContext);
   const { addPost } = useContext(PostContext);
+  const history = useHistory();
   
   // Form state
   const [showSelector, setShowSelector] = useState(false);
@@ -16,8 +18,28 @@ function CreatePost({ onNewPostCreated }) {
   const [price, setPrice] = useState('');
   const [condition, setCondition] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [previewImage, setPreviewImage] = useState(null);
+
+  const subjectOptions = [
+    'Mathematics',
+    'Computer Science',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'Economics',
+    'Psychology'
+  ];
+
+  const conditionOptions = [
+    'New',
+    'Like New',
+    'Very Good',
+    'Good',
+    'Acceptable'
+  ];
 
   // Load Cloudinary widget
   useEffect(() => {
@@ -30,25 +52,6 @@ function CreatePost({ onNewPostCreated }) {
       document.body.removeChild(script);
     };
   }, []);
-
-  const subjectOptions = [
-    'Mathematics',
-    'Computer Science',
-    'Physics',
-    'Chemistry',
-    'Biology',
-    'Economics',
-    'Psychology',
-    'Other'
-  ];
-
-  const conditionOptions = [
-    'New',
-    'Like New',
-    'Very Good',
-    'Good',
-    'Acceptable'
-  ];
 
   const handleTextbookSelect = (textbook) => {
     setAuthor(textbook.author);
@@ -74,38 +77,70 @@ function CreatePost({ onNewPostCreated }) {
         {
           cloudName: 'duhjluee1',
           uploadPreset: 'unsigned',
+          sources: ['local', 'camera'],
+          multiple: false,
+          maxFiles: 1,
+          maxFileSize: 5000000, // 5MB
+          styles: {
+            palette: {
+              window: "#FFFFFF",
+              windowBorder: "#90A0B3",
+              tabIcon: "#0078FF",
+              menuIcons: "#5A616A",
+              textDark: "#000000",
+              textLight: "#FFFFFF",
+              link: "#0078FF",
+              action: "#FF620C",
+              inactiveTabIcon: "#0E2F5A",
+              error: "#F44235",
+              inProgress: "#0078FF",
+              complete: "#20B832",
+              sourceBg: "#E4EBF1"
+            }
+          }
         },
         (error, result) => {
           if (!error && result && result.event === "success") {
             setImageUrl(result.info.public_id);
+            setPreviewImage(result.info.secure_url);
             setErrors(prevErrors => ({ ...prevErrors, image: null }));
           } else if (error) {
             console.error('Upload error:', error);
-            setErrors(prevErrors => ({ ...prevErrors, image: 'Failed to upload image. Please try again.' }));
+            setErrors(prevErrors => ({ 
+              ...prevErrors, 
+              image: 'Failed to upload image. Please try again.' 
+            }));
           }
         }
       ).open();
     } else {
       console.error('Cloudinary widget is not loaded yet');
-      setErrors(prevErrors => ({ ...prevErrors, image: 'Image upload is not available. Please try again later.' }));
+      setErrors(prevErrors => ({ 
+        ...prevErrors, 
+        image: 'Image upload is not available. Please try again later.' 
+      }));
     }
   };
 
   const validateForm = () => {
     const validationErrors = {};
-    if (!author) validationErrors.author = 'Author is required';
-    if (!title) validationErrors.title = 'Title is required';
+    
+    if (!title.trim()) validationErrors.title = 'Title is required';
+    if (!author.trim()) validationErrors.author = 'Author is required';
     if (!subject) validationErrors.subject = 'Subject is required';
+    
     if (!isbn) {
       validationErrors.isbn = 'ISBN is required';
     } else if (!/^\d{13}$/.test(isbn)) {
       validationErrors.isbn = 'ISBN must be a 13-digit number';
     }
+    
     if (!price) {
       validationErrors.price = 'Price is required';
-    } else if (isNaN(price) || price <= 0) {
+    } else if (isNaN(price) || Number(price) <= 0) {
       validationErrors.price = 'Price must be a positive number';
     }
+    
     if (!condition) validationErrors.condition = 'Condition is required';
     
     return validationErrors;
@@ -115,14 +150,17 @@ function CreatePost({ onNewPostCreated }) {
     e.preventDefault();
     setErrors({});
     setSuccessMessage('');
+    setLoading(true);
 
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+      setLoading(false);
       return;
     }
 
     const formData = new FormData();
+    formData.append('csrf_token', csrfToken);
     formData.append('author', author);
     formData.append('title', title);
     formData.append('isbn', isbn);
@@ -137,46 +175,74 @@ function CreatePost({ onNewPostCreated }) {
     try {
       const response = await fetch('/posts', {
         method: 'POST',
+        credentials: 'include',
+        headers: {
+          'X-CSRF-Token': csrfToken
+        },
         body: formData,
       });
 
       const data = await response.json();
 
-      if (response.ok) {
-        addPost(data);
-        
-        // Reset form fields
-        setAuthor('');
-        setTitle('');
-        setIsbn('');
-        setSubject('');
-        setPrice('');
-        setCondition('');
-        setImageUrl('');
-        setErrors({});
-        setShowSelector(false);
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create post');
+      }
 
-        setSuccessMessage('Post created successfully!');
-        if (onNewPostCreated) {
-          onNewPostCreated();
-        }
+      addPost(data);
+      setSuccessMessage('Post created successfully!');
+      
+      // Reset form
+      setAuthor('');
+      setTitle('');
+      setIsbn('');
+      setSubject('');
+      setPrice('');
+      setCondition('');
+      setImageUrl('');
+      setPreviewImage(null);
+      setErrors({});
+      setShowSelector(false);
+
+      // Redirect or callback
+      if (onNewPostCreated) {
+        onNewPostCreated();
       } else {
-        console.error('Failed to create post:', data);
-        setErrors({ submit: data.message || 'Failed to create post. Please try again.' });
+        history.push('/');
       }
     } catch (error) {
       console.error('Error creating post:', error);
-      setErrors({ submit: 'An error occurred while creating the post. Please try again.' });
+      setErrors({ 
+        submit: error.message || 'An error occurred while creating the post. Please try again.' 
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (!user) {
+    return <div>Please log in to create a post.</div>;
+  }
+
   return (
     <div className="create-post-form">
+      {successMessage && (
+        <div className="success-message" role="alert">
+          {successMessage}
+        </div>
+      )}
+      
+      {errors.submit && (
+        <div className="error-message" role="alert">
+          {errors.submit}
+        </div>
+      )}
+
       <div className="mb-4">
         <button 
           type="button"
           className="btn btn-secondary" 
           onClick={() => setShowSelector(!showSelector)}
+          disabled={loading}
         >
           {showSelector ? 'Hide Textbook Selector' : 'Select Existing Textbook'}
         </button>
@@ -188,19 +254,9 @@ function CreatePost({ onNewPostCreated }) {
         </div>
       )}
 
-      {successMessage && (
-        <div className="success-message">
-          {successMessage}
-        </div>
-      )}
-      
-      {errors.submit && (
-        <div className="error-message">
-          {errors.submit}
-        </div>
-      )}
+      <form onSubmit={handleSubmit} className="create-post-form">
+        <input type="hidden" name="csrf_token" value={csrfToken} />
 
-      <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="title">Title:</label>
           <input
@@ -208,7 +264,8 @@ function CreatePost({ onNewPostCreated }) {
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            aria-required="true"
+            disabled={loading}
+            className={errors.title ? 'error' : ''}
             aria-invalid={errors.title ? 'true' : 'false'}
           />
           {errors.title && <span className="error">{errors.title}</span>}
@@ -221,7 +278,8 @@ function CreatePost({ onNewPostCreated }) {
             id="author"
             value={author}
             onChange={(e) => setAuthor(e.target.value)}
-            aria-required="true"
+            disabled={loading}
+            className={errors.author ? 'error' : ''}
             aria-invalid={errors.author ? 'true' : 'false'}
           />
           {errors.author && <span className="error">{errors.author}</span>}
@@ -234,9 +292,10 @@ function CreatePost({ onNewPostCreated }) {
             id="isbn"
             value={isbn}
             onChange={(e) => setIsbn(e.target.value)}
-            aria-required="true"
-            aria-invalid={errors.isbn ? 'true' : 'false'}
             placeholder="Enter 13-digit ISBN"
+            disabled={loading}
+            className={errors.isbn ? 'error' : ''}
+            aria-invalid={errors.isbn ? 'true' : 'false'}
           />
           {errors.isbn && <span className="error">{errors.isbn}</span>}
         </div>
@@ -247,7 +306,8 @@ function CreatePost({ onNewPostCreated }) {
             id="subject"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            aria-required="true"
+            disabled={loading}
+            className={errors.subject ? 'error' : ''}
             aria-invalid={errors.subject ? 'true' : 'false'}
           >
             <option value="">Select subject</option>
@@ -265,10 +325,11 @@ function CreatePost({ onNewPostCreated }) {
             id="price"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            aria-required="true"
-            aria-invalid={errors.price ? 'true' : 'false'}
             min="0"
             step="0.01"
+            disabled={loading}
+            className={errors.price ? 'error' : ''}
+            aria-invalid={errors.price ? 'true' : 'false'}
           />
           {errors.price && <span className="error">{errors.price}</span>}
         </div>
@@ -279,7 +340,8 @@ function CreatePost({ onNewPostCreated }) {
             id="condition"
             value={condition}
             onChange={(e) => setCondition(e.target.value)}
-            aria-required="true"
+            disabled={loading}
+            className={errors.condition ? 'error' : ''}
             aria-invalid={errors.condition ? 'true' : 'false'}
           >
             <option value="">Select condition</option>
@@ -291,21 +353,33 @@ function CreatePost({ onNewPostCreated }) {
         </div>
 
         <div className="form-group">
-          <button type="button" onClick={handleImageUpload} className="btn btn-secondary">
+          <button 
+            type="button" 
+            onClick={handleImageUpload} 
+            className="btn btn-secondary"
+            disabled={loading}
+          >
             {imageUrl ? 'Change Image' : 'Upload Image'}
           </button>
-          {imageUrl && (
+          {previewImage && (
             <div className="image-preview">
               <img 
-                src={`https://res.cloudinary.com/duhjluee1/image/upload/${imageUrl}`} 
-                alt="Uploaded textbook" 
+                src={previewImage}
+                alt="Book preview" 
+                className="preview-image"
               />
             </div>
           )}
           {errors.image && <span className="error">{errors.image}</span>}
         </div>
 
-        <button type="submit" className="btn btn-success">Create Post</button>
+        <button 
+          type="submit" 
+          className="btn btn-success"
+          disabled={loading}
+        >
+          {loading ? 'Creating Post...' : 'Create Post'}
+        </button>
       </form>
     </div>
   );
