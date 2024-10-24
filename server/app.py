@@ -34,13 +34,20 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 def send_email(subject, recipients, body):
-    msg = Message(subject, recipients=recipients)
-    msg.body = body
-    mail.send(msg)
+    try:
+        msg = Message(subject, recipients=recipients)
+        msg.body = body
+        mail.send(msg)
+        app_logger.info(f"Email sent successfully to {recipients}")
+        return True
+    except Exception as e:
+        app_logger.error(f"Failed to send email to {recipients}: {str(e)}")
+        return False
 
 @app.route('/')
 def index():
     return '<h1>Project Server</h1>'
+
 class PostResource(Resource):
 
     def get(self, post_id=None):
@@ -131,82 +138,119 @@ class PostResource(Resource):
             return {"message": f"Error creating post: {str(e)}"}, 500
 
     def put(self, post_id):
-            print(f"Received PUT request for post {post_id}")
-            try:
-                if not current_user.is_authenticated:
-                    print("User not authenticated")
-                    return {"message": "Authentication required"}, 401
+        print(f"Received PUT request for post {post_id}")
+        try:
+            if not current_user.is_authenticated:
+                print("User not authenticated")
+                return {"message": "Authentication required"}, 401
 
-                post = Post.query.get(post_id)
-                if not post:
-                    print(f"Post {post_id} not found")
-                    return {"message": "Post not found"}, 404
+            post = Post.query.get(post_id)
+            if not post:
+                print(f"Post {post_id} not found")
+                return {"message": "Post not found"}, 404
 
-                if post.user_id != current_user.id:
-                    print(f"Unauthorized attempt to edit post {post_id}")
-                    return {"message": "Unauthorized"}, 401
+            if post.user_id != current_user.id:
+                print(f"Unauthorized attempt to edit post {post_id}")
+                return {"message": "Unauthorized"}, 401
 
-                data = request.form
-                if not data:
-                    print("No input data provided")
-                    return {"message": "No input data provided"}, 400
+            data = request.form
+            if not data:
+                print("No input data provided")
+                return {"message": "No input data provided"}, 400
 
-                print(f"Processing update for post {post_id} with data: {data}")
+            print(f"Processing update for post {post_id} with data: {data}")
+            
+            # Store original price for comparison
+            original_price = float(post.price)
+            new_price = float(data.get('price', post.price))
+            
+            app_logger.debug(f"Price comparison - Original: ${original_price:.2f}, New: ${new_price:.2f}")
+
+            # Update post fields
+            post.price = new_price
+            post.condition = data.get('condition', post.condition)
+
+            # Update textbook fields
+            textbook = post.textbook
+            textbook.title = data.get('title', textbook.title)
+            textbook.author = data.get('author', textbook.author)
+            textbook.subject = data.get('subject', textbook.subject)
+            
+            if 'isbn' in data:
+                try:
+                    isbn = int(data['isbn'])
+                    Textbook.validate_isbn(isbn)
+                    textbook.isbn = isbn
+                except ValueError as e:
+                    print(f"Invalid ISBN: {str(e)}")
+                    return {"message": str(e)}, 400
+
+            # Handle image update
+            image_public_id = data.get('image_public_id')
+            if image_public_id:
+                post.img = image_public_id
+
+            # Process notifications and emails for price changes
+            if new_price < original_price:
+                app_logger.info(f"Price reduction detected for post {post_id}")
+                watchlist_items = Watchlist.query.filter_by(post_id=post_id).all()
+                app_logger.debug(f"Found {len(watchlist_items)} watchlist items")
+
+                for item in watchlist_items:
+                    # Create notification
+                    notification = Notification(
+                        user_id=item.user_id,
+                        post_id=post_id,
+                        message=f"Price dropped for {post.textbook.title} from ${original_price:.2f} to ${new_price:.2f}!"
+                    )
+                    db.session.add(notification)
+                    app_logger.debug(f"Created notification for user {item.user_id}")
+
+                    # Send email to watchlist user
+                    user = User.query.get(item.user_id)
+                    if user and user.email:
+                        app_logger.debug(f"Attempting to send email to {user.email}")
+                        with app.app_context():
+                            email_success = send_email(
+                                subject="Price Drop Alert - Campus Textbook Exchange",
+                                recipients=[user.email],
+                                body=f"""
+Hello {user.name or user.email},
+
+Good news! A textbook on your watchlist has dropped in price:
+
+Textbook: {post.textbook.title}
+Author: {post.textbook.author}
+Original Price: ${original_price:.2f}
+New Price: ${new_price:.2f}
+
+You can view the post here: http://localhost:3000/posts/{post_id}
+
+Best regards,
+Campus Textbook Exchange Team
+                                """
+                            )
+                            if email_success:
+                                app_logger.info(f"Price drop email sent to {user.email}")
+                            else:
+                                app_logger.error(f"Failed to send price drop email to {user.email}")
+
+            # Commit all changes
+            db.session.commit()
+            app_logger.info(f"Successfully updated post {post_id}")
+
+            # Return the full post data with associations
+            post_data = post.to_dict()
+            post_data['textbook'] = post.textbook.to_dict()
+            post_data['user'] = current_user.to_dict()
+            post_data['image_url'] = post.image_url
+
+            return post_data, 200
                 
-                # Store original price for comparison
-                original_price = float(post.price)
-
-                # Update post fields
-                post.price = data.get('price', post.price)
-                post.condition = data.get('condition', post.condition)
-
-                # Update textbook fields
-                textbook = post.textbook
-                textbook.title = data.get('title', textbook.title)
-                textbook.author = data.get('author', textbook.author)
-                textbook.subject = data.get('subject', textbook.subject)
-                
-                if 'isbn' in data:
-                    try:
-                        isbn = int(data['isbn'])
-                        Textbook.validate_isbn(isbn)
-                        textbook.isbn = isbn
-                    except ValueError as e:
-                        print(f"Invalid ISBN: {str(e)}")
-                        return {"message": str(e)}, 400
-
-                # Handle image update
-                image_public_id = data.get('image_public_id')
-                if image_public_id:
-                    post.img = image_public_id
-
-                # Process notifications for price changes
-                new_price = float(post.price)
-                if new_price < original_price:
-                    watchlist_items = Watchlist.query.filter_by(post_id=post_id).all()
-                    for item in watchlist_items:
-                        notification = Notification(
-                            user_id=item.user_id,
-                            post_id=post_id,
-                            message=f"Price dropped for {post.textbook.title} from ${original_price:.2f} to ${new_price:.2f}!"
-                        )
-                        db.session.add(notification)
-
-                db.session.commit()
-                print(f"Successfully updated post {post_id}")
-
-                # Return the full post data with associations
-                post_data = post.to_dict()
-                post_data['textbook'] = textbook.to_dict()
-                post_data['user'] = current_user.to_dict()
-                post_data['image_url'] = post.image_url
-
-                return post_data, 200
-                    
-            except Exception as e:
-                db.session.rollback()
-                print(f"Error updating post {post_id}: {str(e)}")
-                return {"message": f"Error updating post: {str(e)}"}, 500
+        except Exception as e:
+            db.session.rollback()
+            app_logger.error(f"Error updating post {post_id}: {str(e)}", exc_info=True)
+            return {"message": f"Error updating post: {str(e)}"}, 500
     
     def delete(self, post_id):
         post = Post.query.get(post_id)
@@ -371,6 +415,7 @@ class WatchlistResource(Resource):
 
         return watchlist_data, 200
 
+
     def post(self, user_id):
         try:
             data = request.get_json()
@@ -391,20 +436,51 @@ class WatchlistResource(Resource):
             if not post:
                 return {"message": "Post not found"}, 404
 
+            # Send email to post owner
+            if post.user.email:
+                send_email(
+                    subject="New Watchlist Addition - Campus Textbook Exchange",
+                    recipients=[post.user.email],
+                    body=f"""
+Hello {post.user.name or post.user.email},
+
+Someone has added your textbook post to their watchlist!
+
+Textbook: {post.textbook.title}
+Listed Price: ${post.price:.2f}
+
+This means there's active interest in your listing. Make sure your post is up to date!
+
+Best regards,
+Campus Textbook Exchange Team
+                    """
+                )
+
+            # Rest of the watchlist creation logic...
             textbook = Textbook.query.get(textbook_id)
             if not textbook:
                 return {"message": "Textbook not found"}, 404
 
-            watchlist_item = Watchlist.query.filter_by(user_id=user_id, post_id=post_id, textbook_id=textbook_id).first()
+            watchlist_item = Watchlist.query.filter_by(
+                user_id=user_id, 
+                post_id=post_id, 
+                textbook_id=textbook_id
+            ).first()
+            
             if watchlist_item:
                 return {"message": "Item already in watchlist"}, 400
 
-            new_watchlist_item = Watchlist(user_id=user_id, post_id=post_id, textbook_id=textbook_id)
+            new_watchlist_item = Watchlist(
+                user_id=user_id, 
+                post_id=post_id, 
+                textbook_id=textbook_id
+            )
 
             db.session.add(new_watchlist_item)
             db.session.commit()
 
             return new_watchlist_item.to_dict(), 201
+
         except Exception as e:
             db.session.rollback()
             logging.error(f"Error adding item to watchlist: {str(e)}")
@@ -601,7 +677,59 @@ class NotificationResource(Resource):
 
         
 
+from flask import current_app
+from flask_mail import Message
 
+def send_email(subject, recipients, body):
+    """
+    Send email with proper application context handling.
+    """
+    if not current_app:
+        app_logger.error("No application context - email cannot be sent")
+        return False
+        
+    try:
+        msg = Message(
+            subject,
+            sender=current_app.config['MAIL_DEFAULT_SENDER'],
+            recipients=recipients if isinstance(recipients, list) else [recipients]
+        )
+        msg.body = body
+        
+        app_logger.info(f"Attempting to send email to {recipients}")
+        mail.send(msg)
+        app_logger.info(f"Email sent successfully to {recipients}")
+        return True
+        
+    except Exception as e:
+        app_logger.error(f"Failed to send email: {str(e)}")
+        return False
+
+# Test route with application context
+@app.route('/test_email')
+def test_email():
+    with app.app_context():
+        try:
+            success = send_email(
+                'Test Email',
+                'your-test-email@example.com',
+                'This is a test email from the Campus Textbook Exchange system.'
+            )
+            if success:
+                return 'Email sent successfully', 200
+            return 'Failed to send email', 500
+        except Exception as e:
+            app_logger.error(f"Test email error: {str(e)}")
+            return f'Error: {str(e)}', 500
+
+# For testing in Python shell
+def test_email_shell():
+    with app.app_context():
+        return send_email(
+            'Test Email',
+            'your-test-email@example.com',
+            'This is a test email from the Campus Textbook Exchange system.'
+        )
 
 api.add_resource(PostResource, '/posts', '/posts/<int:post_id>')
 api.add_resource(TextbookResource, '/textbooks', '/textbooks/<int:textbook_id>')
@@ -620,3 +748,4 @@ api.add_resource(NotificationResource,
 api.add_resource(UserResource, '/users', '/users/<int:user_id>')
 if __name__ == '__main__':
     app.run(debug=True)
+

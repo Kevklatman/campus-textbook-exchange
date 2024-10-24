@@ -63,19 +63,20 @@ migrate = Migrate(app, db)
 db.init_app(app)
 
 # Configure Flask-Mail
-app.config.update(
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_PORT=465,
-    MAIL_USE_TLS=False,
-    MAIL_USE_SSL=True,
-    MAIL_USERNAME='campustextbookexchange@gmail.com',
-    MAIL_PASSWORD='bkrb couo vrqn gdsq',  # Consider moving to environment variable
-    MAIL_DEFAULT_SENDER='campustextbookexchange@gmail.com'
-)
-mail = Mail(app)
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_USERNAME'] = 'campustextbookexchange@gmail.com'
+app.config['MAIL_PASSWORD'] = 'bkrb couo vrqn gdsq'
+app.config['MAIL_DEFAULT_SENDER'] = ('Campus Textbook Exchange', 'campustextbookexchange@gmail.com')
+
+# Initialize mail after setting all configs
+mail = Mail()
+mail.init_app(app)
 
 # Secret key configuration
-app.secret_key = 'your_secret_key_here'  # Consider moving to environment variable
+app.secret_key = 'your_secret_key_here'  
 
 # Cloudinary configuration
 cloudinary.config(
@@ -124,3 +125,4 @@ else:
     app_logger.info('Running in production mode')
 
 app_logger.info('Application initialization completed')
+
