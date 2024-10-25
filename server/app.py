@@ -32,29 +32,43 @@ def send_email(subject, recipients, body):
     msg.body = body
     mail.send(msg)
 
-def csrf_token_required(view_func):
-    @wraps(view_func)
-    def wrapped(*args, **kwargs):
-        if request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            token = request.headers.get('X-CSRF-Token')
-            if not token:
-                return jsonify({'error': 'CSRF token missing'}), 400
-        return view_func(*args, **kwargs)
-    return wrapped
+@app.after_request
+def after_request(response):
+    # Enable CORS
+    response.headers.update({
+        'Access-Control-Allow-Origin': 'http://localhost:3000',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token',
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Expose-Headers': 'X-CSRF-Token'
+    })
+    
+    # Ensure CSRF token is set in cookie
+    if 'csrf_token' not in request.cookies:
+        token = generate_csrf()
+        response.set_cookie(
+            'csrf_token',
+            token,
+            secure=False,  # Set to True in production with HTTPS
+            httponly=False,
+            samesite='Lax',
+            path='/'
+        )
+    
+    return response
 
 @app.route('/csrf_token', methods=['GET'])
 @csrf.exempt
 def get_csrf_token():
     token = generate_csrf()
-    response = make_response(jsonify({'csrf_token': token}))
+    response = jsonify({'csrf_token': token})
     response.set_cookie(
         'csrf_token',
         token,
-        secure=True,
+        secure=False,  # Set to True in production with HTTPS
         httponly=False,
         samesite='Lax',
-        path='/',
-        max_age=3600  # 1 hour expiration
+        path='/'
     )
     return response
 
@@ -390,43 +404,59 @@ class CommentResource(Resource):
             return comments_data, 200
 
     def post(self, post_id):
-        data = request.get_json()
-        if not data:
-            return {"message": "No input data provided"}, 400
-
-        text = data.get('text')
-
-        if not text:
-            return {"message": "Comment text is required"}, 400
-
-        post = Post.query.get(post_id)
-        if not post:
-            return {"message": "Post not found"}, 404
-
-        user = current_user
-
-        new_comment = Comment(text=text, user_id=user.id, post_id=post_id)
-        db.session.add(new_comment)
-        db.session.commit()
-
-        return new_comment.to_dict(), 201
-    
-    def delete(self, post_id, comment_id):
-        comment = Comment.query.get(comment_id)
-        if not comment:
-            return {"message": "Comment not found"}, 404
-
-        # Check if the current user is the comment owner
-        if comment.user_id != current_user.id:
-            return {"message": "Unauthorized"}, 401
-
         try:
+            # Verify CSRF token
+            token = request.headers.get('X-CSRF-Token')
+            if not token:
+                return {"message": "CSRF token is missing"}, 400
+            
+            data = request.get_json()
+            if not data:
+                return {"message": "No input data provided"}, 400
+
+            text = data.get('text')
+            if not text:
+                return {"message": "Comment text is required"}, 400
+
+            post = Post.query.get(post_id)
+            if not post:
+                return {"message": "Post not found"}, 404
+
+            new_comment = Comment(
+                text=text,
+                user_id=current_user.id,
+                post_id=post_id
+            )
+            db.session.add(new_comment)
+            db.session.commit()
+
+            return new_comment.to_dict(), 201
+
+        except Exception as e:
+            db.session.rollback()
+            return {"message": str(e)}, 500
+
+    def delete(self, post_id, comment_id):
+        try:
+            # Verify CSRF token
+            token = request.headers.get('X-CSRF-Token')
+            if not token:
+                return {"message": "CSRF token is missing"}, 400
+            
+            comment = Comment.query.get(comment_id)
+            if not comment:
+                return {"message": "Comment not found"}, 404
+
+            if comment.user_id != current_user.id:
+                return {"message": "Unauthorized"}, 401
+
             db.session.delete(comment)
             db.session.commit()
             return {"message": "Comment deleted successfully"}, 200
+            
         except Exception as e:
             db.session.rollback()
-            return {"message": "Error deleting comment", "error": str(e)}, 500
+            return {"message": str(e)}, 500
 
 class WatchlistResource(Resource):
     def get(self, user_id):

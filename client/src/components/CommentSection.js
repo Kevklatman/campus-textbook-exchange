@@ -1,9 +1,9 @@
 import React, { useState, useContext } from 'react';
 import { UserContext } from '../contexts/UserContext';
 
-function CommentSection({ comments, onCommentSubmit }) {
+function CommentSection({ comments, onCommentSubmit, postId }) { // Add postId prop
   const [newComment, setNewComment] = useState('');
-  const { user, csrfToken } = useContext(UserContext);
+  const { user, makeRequest } = useContext(UserContext);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -24,25 +24,21 @@ function CommentSection({ comments, onCommentSubmit }) {
     setError(null);
 
     try {
-      const response = await fetch(`/posts/${comments[0].post_id}/comments`, {
+      const response = await makeRequest(`/posts/${postId}/comments`, { // Use postId prop
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
-        },
-        credentials: 'include',
-        body: JSON.stringify({ text: newComment }),
+        body: JSON.stringify({ text: newComment })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to post comment');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to post comment');
       }
 
       setNewComment('');
-      await onCommentSubmit(newComment);
+      await onCommentSubmit();
     } catch (error) {
       console.error('Error submitting comment:', error);
-      setError('Failed to post comment. Please try again.');
+      setError(error.message || 'Failed to post comment. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -55,22 +51,20 @@ function CommentSection({ comments, onCommentSubmit }) {
 
     setDeleting(commentId);
     try {
-      const response = await fetch(`/posts/${comments[0].post_id}/comments/${commentId}`, {
-        method: 'DELETE',
-        headers: {
-          'X-CSRF-Token': csrfToken
-        },
-        credentials: 'include',
-      });
+      const response = await makeRequest(
+        `/posts/${postId}/comments/${commentId}`, // Use postId prop
+        { method: 'DELETE' }
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to delete comment');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete comment');
       }
 
-      await onCommentSubmit(null);
+      await onCommentSubmit();
     } catch (error) {
       console.error('Error deleting comment:', error);
-      alert('Failed to delete comment. Please try again.');
+      setError(error.message || 'Failed to delete comment. Please try again.');
     } finally {
       setDeleting(null);
     }
@@ -104,42 +98,71 @@ function CommentSection({ comments, onCommentSubmit }) {
     }
   };
 
+  // Safety check for empty comments array
+  if (!comments || comments.length === 0) {
+    return (
+      <div className="comment-section">
+        <h3>Comments (0)</h3>
+        <div className="no-comments">
+          No comments yet. Be the first to comment!
+        </div>
+        {user ? (
+          <div className="new-comment">
+            <textarea
+              placeholder="Write a comment..."
+              value={newComment}
+              onChange={handleCommentChange}
+              disabled={submitting}
+              className={error ? 'error' : ''}
+            />
+            {error && <div className="error-message">{error}</div>}
+            <button 
+              className="btn btn-success"
+              onClick={handleSubmit}
+              disabled={submitting || !newComment.trim()}
+            >
+              {submitting ? 'Posting...' : 'Post Comment'}
+            </button>
+          </div>
+        ) : (
+          <div className="login-prompt">
+            Please log in to leave a comment.
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="comment-section">
       <h3>Comments {comments.length > 0 && `(${comments.length})`}</h3>
 
-      {comments && comments.length > 0 ? (
-        <ul className="comment-list">
-          {comments.map((comment) => (
-            <li key={comment.id} className="comment-item">
-              <div className="comment-header">
-                <span className="comment-author">{comment.user.email}</span>
-                <time 
-                  className="comment-date" 
-                  dateTime={comment.created_at}
-                  title={new Date(comment.created_at).toLocaleString()}
+      <ul className="comment-list">
+        {comments.map((comment) => (
+          <li key={comment.id} className="comment-item">
+            <div className="comment-header">
+              <span className="comment-author">{comment.user.email}</span>
+              <time 
+                className="comment-date" 
+                dateTime={comment.created_at}
+                title={new Date(comment.created_at).toLocaleString()}
+              >
+                {formatDate(comment.created_at)}
+              </time>
+              {user && user.id === comment.user.id && (
+                <button 
+                  onClick={() => handleDeleteComment(comment.id)}
+                  className="btn btn-danger comment-delete-btn"
+                  disabled={deleting === comment.id}
                 >
-                  {formatDate(comment.created_at)}
-                </time>
-                {user && user.id === comment.user.id && (
-                  <button 
-                    onClick={() => handleDeleteComment(comment.id)}
-                    className="btn btn-danger comment-delete-btn"
-                    disabled={deleting === comment.id}
-                  >
-                    {deleting === comment.id ? 'Deleting...' : 'Delete'}
-                  </button>
-                )}
-              </div>
-              <p className="comment-content">{comment.text}</p>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="no-comments">
-          No comments yet. Be the first to comment!
-        </div>
-      )}
+                  {deleting === comment.id ? 'Deleting...' : 'Delete'}
+                </button>
+              )}
+            </div>
+            <p className="comment-content">{comment.text}</p>
+          </li>
+        ))}
+      </ul>
       
       {user ? (
         <div className="new-comment">
