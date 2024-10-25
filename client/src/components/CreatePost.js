@@ -2,6 +2,8 @@ import React, { useState, useContext, useEffect } from 'react';
 import { UserContext } from '../contexts/UserContext';
 import { PostContext } from '../contexts/PostContext';
 import TextbookSelector from './TextbookSelector';
+import LocationRadiusSelector from './LocationRadiusSelector';
+import { MapPin, Upload, Book, X } from 'lucide-react';
 import { useHistory } from 'react-router-dom';
 
 function CreatePost({ onNewPostCreated }) {
@@ -18,10 +20,12 @@ function CreatePost({ onNewPostCreated }) {
   const [price, setPrice] = useState('');
   const [condition, setCondition] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
+  const [locationStatus, setLocationStatus] = useState('pending'); // 'pending', 'success', 'error'
 
   const subjectOptions = [
     'Mathematics',
@@ -53,6 +57,20 @@ function CreatePost({ onNewPostCreated }) {
     };
   }, []);
 
+  const handleLocationChange = (locationData) => {
+    setLocation(locationData);
+    setLocationStatus('success');
+    setErrors(prev => ({ ...prev, location: null }));
+  };
+
+  const handleLocationError = (error) => {
+    setLocationStatus('error');
+    setErrors(prev => ({ 
+      ...prev, 
+      location: 'Unable to get location. Please try again or enter manually.' 
+    }));
+  };
+
   const handleTextbookSelect = (textbook) => {
     setAuthor(textbook.author);
     setTitle(textbook.title);
@@ -61,7 +79,6 @@ function CreatePost({ onNewPostCreated }) {
       setSubject(textbook.subject);
     }
     setShowSelector(false);
-    // Clear any existing errors for these fields
     setErrors(prev => ({
       ...prev,
       author: null,
@@ -103,21 +120,21 @@ function CreatePost({ onNewPostCreated }) {
           if (!error && result && result.event === "success") {
             setImageUrl(result.info.public_id);
             setPreviewImage(result.info.secure_url);
-            setErrors(prevErrors => ({ ...prevErrors, image: null }));
+            setErrors(prev => ({ ...prev, image: null }));
           } else if (error) {
             console.error('Upload error:', error);
-            setErrors(prevErrors => ({ 
-              ...prevErrors, 
-              image: 'Failed to upload image. Please try again.' 
+            setErrors(prev => ({
+              ...prev,
+              image: 'Failed to upload image. Please try again.'
             }));
           }
         }
       ).open();
     } else {
       console.error('Cloudinary widget is not loaded yet');
-      setErrors(prevErrors => ({ 
-        ...prevErrors, 
-        image: 'Image upload is not available. Please try again later.' 
+      setErrors(prev => ({
+        ...prev,
+        image: 'Image upload is not available. Please try again later.'
       }));
     }
   };
@@ -142,6 +159,8 @@ function CreatePost({ onNewPostCreated }) {
     }
     
     if (!condition) validationErrors.condition = 'Condition is required';
+    
+    if (!location) validationErrors.location = 'Location is required';
     
     return validationErrors;
   };
@@ -168,6 +187,13 @@ function CreatePost({ onNewPostCreated }) {
     formData.append('price', price);
     formData.append('condition', condition);
     formData.append('user_id', user.id);
+
+    // Append location data if available
+    if (location) {
+      formData.append('latitude', location.lat);
+      formData.append('longitude', location.lng);
+    }
+
     if (imageUrl) {
       formData.append('image_public_id', imageUrl);
     }
@@ -200,6 +226,7 @@ function CreatePost({ onNewPostCreated }) {
       setCondition('');
       setImageUrl('');
       setPreviewImage(null);
+      setLocation(null);
       setErrors({});
       setShowSelector(false);
 
@@ -211,8 +238,8 @@ function CreatePost({ onNewPostCreated }) {
       }
     } catch (error) {
       console.error('Error creating post:', error);
-      setErrors({ 
-        submit: error.message || 'An error occurred while creating the post. Please try again.' 
+      setErrors({
+        submit: error.message || 'An error occurred while creating the post. Please try again.'
       });
     } finally {
       setLoading(false);
@@ -244,7 +271,17 @@ function CreatePost({ onNewPostCreated }) {
           onClick={() => setShowSelector(!showSelector)}
           disabled={loading}
         >
-          {showSelector ? 'Hide Textbook Selector' : 'Select Existing Textbook'}
+          {showSelector ? (
+            <span className="flex items-center">
+              <X className="w-4 h-4 mr-2" />
+              Hide Textbook Selector
+            </span>
+          ) : (
+            <span className="flex items-center">
+              <Book className="w-4 h-4 mr-2" />
+              Select Existing Textbook
+            </span>
+          )}
         </button>
       </div>
 
@@ -254,8 +291,19 @@ function CreatePost({ onNewPostCreated }) {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="create-post-form">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <input type="hidden" name="csrf_token" value={csrfToken} />
+
+        <div className="form-group">
+          <label htmlFor="location" className="form-label">Location:</label>
+          <LocationRadiusSelector
+            onLocationChange={handleLocationChange}
+            onLocationError={handleLocationError}
+          />
+          {errors.location && (
+            <span className="error">{errors.location}</span>
+          )}
+        </div>
 
         <div className="form-group">
           <label htmlFor="title">Title:</label>
@@ -356,17 +404,18 @@ function CreatePost({ onNewPostCreated }) {
           <button 
             type="button" 
             onClick={handleImageUpload} 
-            className="btn btn-secondary"
+            className="btn btn-secondary flex items-center"
             disabled={loading}
           >
+            <Upload className="w-4 h-4 mr-2" />
             {imageUrl ? 'Change Image' : 'Upload Image'}
           </button>
           {previewImage && (
-            <div className="image-preview">
+            <div className="image-preview mt-4">
               <img 
                 src={previewImage}
                 alt="Book preview" 
-                className="preview-image"
+                className="preview-image rounded-lg shadow-md"
               />
             </div>
           )}
@@ -375,7 +424,7 @@ function CreatePost({ onNewPostCreated }) {
 
         <button 
           type="submit" 
-          className="btn btn-success"
+          className="btn btn-success w-full flex items-center justify-center"
           disabled={loading}
         >
           {loading ? 'Creating Post...' : 'Create Post'}

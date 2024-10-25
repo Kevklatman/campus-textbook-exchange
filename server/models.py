@@ -124,6 +124,8 @@ class Post(db.Model, SerializerMixin):
     condition = db.Column(String)
     created_at = db.Column(DateTime, server_default=func.now())
     img = db.Column(db.String, nullable=True)  # This now stores the Cloudinary public ID
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
 
     user = relationship('User', back_populates='posts')
     textbook = relationship('Textbook', back_populates='posts')

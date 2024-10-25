@@ -13,6 +13,8 @@ from flask import session
 from datetime import timedelta
 from flask_wtf.csrf import generate_csrf, CSRFError
 from functools import wraps
+from math import radians, cos, sin, asin, sqrt
+
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -31,6 +33,23 @@ def send_email(subject, recipients, body):
     msg = Message(subject, recipients=recipients)
     msg.body = body
     mail.send(msg)
+
+def haversine_distance(lat1, lon1, lat2, lon2):
+    """
+    Calculate the great circle distance between two points 
+    on the earth (specified in decimal degrees)
+    """
+    # Convert decimal degrees to radians
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a))
+    r = 3956  # Radius of earth in miles
+    return c * r
+
 
 @app.after_request
 def after_request(response):
@@ -120,37 +139,127 @@ def index():
 
 
 
+from flask import Flask, jsonify, request, make_response
+from flask_restful import Resource
+from models import Post, Textbook, User
+from sqlalchemy import func, or_
+from math import radians, cos, sin, asin, sqrt
+from datetime import datetime
+
 class PostResource(Resource):
+    def haversine_distance(self, lat1, lon1, lat2, lon2):
+        """
+        Calculate the great circle distance between two points 
+        on the earth (specified in decimal degrees)
+        """
+        try:
+            # Convert decimal degrees to radians
+            lat1, lon1, lat2, lon2 = map(radians, [float(lat1), float(lon1), float(lat2), float(lon2)])
+
+            # Haversine formula
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+            a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+            c = 2 * asin(sqrt(a))
+            # Radius of earth in miles
+            r = 3956
+            return c * r
+        except (TypeError, ValueError):
+            return None
 
     def get(self, post_id=None):
-        if post_id is None:
-            user_id = request.args.get('user_id')
-            if user_id:
-                posts = Post.query.filter_by(user_id=user_id).all()
-            else:
-                posts = Post.query.all()
+        try:
+            if post_id is None:
+                # Get query parameters
+                user_id = request.args.get('user_id')
+                lat = request.args.get('lat')
+                lng = request.args.get('lng')
+                radius = request.args.get('radius', type=float, default=10)
+                sort_by = request.args.get('sort', default='date')  # 'date', 'price', or 'distance'
+                search_query = request.args.get('q')
+                subject = request.args.get('subject')
+                min_price = request.args.get('min_price', type=float)
+                max_price = request.args.get('max_price', type=float)
+                condition = request.args.get('condition')
 
-            posts_data = []
-            for post in posts:
+                # Start with base query
+                query = Post.query
+
+                # Apply filters
+                if user_id:
+                    query = query.filter_by(user_id=user_id)
+                
+                if subject:
+                    query = query.join(Textbook).filter(Textbook.subject == subject)
+                
+                if min_price is not None:
+                    query = query.filter(Post.price >= min_price)
+                
+                if max_price is not None:
+                    query = query.filter(Post.price <= max_price)
+                
+                if condition:
+                    query = query.filter(Post.condition == condition)
+                
+                if search_query:
+                    search = f"%{search_query}%"
+                    query = query.join(Textbook).filter(
+                        or_(
+                            Textbook.title.ilike(search),
+                            Textbook.author.ilike(search),
+                            Textbook.isbn.ilike(search)
+                        )
+                    )
+
+                # Execute query
+                posts = query.all()
+                posts_data = []
+
+                # Process posts with location filtering if applicable
+                for post in posts:
+                    post_data = post.to_dict()
+                    post_data['user'] = post.user.to_dict()
+                    post_data['textbook'] = post.textbook.to_dict()
+                    post_data['comments'] = [comment.to_dict() for comment in post.comments]
+
+                    # Calculate distance if location parameters provided
+                    if lat and lng and post.latitude and post.longitude:
+                        distance = self.haversine_distance(
+                            lat, lng,
+                            post.latitude, post.longitude
+                        )
+                        if distance is not None:
+                            post_data['distance'] = round(distance, 1)
+                            # Only include if within radius
+                            if distance <= radius:
+                                posts_data.append(post_data)
+                    else:
+                        posts_data.append(post_data)
+
+                # Sort results
+                if sort_by == 'price':
+                    posts_data.sort(key=lambda x: float(x['price']))
+                elif sort_by == 'distance' and lat and lng:
+                    posts_data.sort(key=lambda x: x.get('distance', float('inf')))
+                else:  # Default to date
+                    posts_data.sort(key=lambda x: x['created_at'], reverse=True)
+
+                return posts_data, 200
+            else:
+                post = Post.query.get(post_id)
+                if post is None:
+                    return {"message": "Post not found"}, 404
+                
                 post_data = post.to_dict()
                 post_data['user'] = post.user.to_dict()
                 post_data['textbook'] = post.textbook.to_dict()
                 post_data['comments'] = [comment.to_dict() for comment in post.comments]
-                posts_data.append(post_data)
-            
-            return posts_data, 200
-        else:
-            post = Post.query.get(post_id)
-            if post is None:
-                return {"message": "Post not found"}, 404
-            
-            post_data = post.to_dict()
-            post_data['user'] = post.user.to_dict()
-            post_data['textbook'] = post.textbook.to_dict()
-            post_data['comments'] = [comment.to_dict() for comment in post.comments]
-            
-            return post_data, 200
-        
+                
+                return post_data, 200
+
+        except Exception as e:
+            print(f"Error in get: {str(e)}")
+            return {"message": "Internal server error"}, 500
 
     def post(self):
         try:
@@ -159,37 +268,59 @@ class PostResource(Resource):
             print("Received data:", data)
             print("Received files:", files)
 
-            user_id = data.get('user_id')
-            isbn = data.get('isbn')
-            price = data.get('price')
-            condition = data.get('condition')
+            # Validate required fields
+            required_fields = ['user_id', 'isbn', 'price', 'condition']
+            for field in required_fields:
+                if not data.get(field):
+                    return {"message": f"{field} is required"}, 400
 
-            if not user_id or not isbn or not price or not condition:
-                return {"message": "User ID, ISBN, price, and condition are required"}, 400
+            # Validate and process location data
+            latitude = data.get('latitude')
+            longitude = data.get('longitude')
+            if latitude and longitude:
+                try:
+                    latitude = float(latitude)
+                    longitude = float(longitude)
+                    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+                        return {"message": "Invalid coordinates"}, 400
+                except ValueError:
+                    return {"message": "Invalid coordinates format"}, 400
 
+            # Process ISBN
             try:
-                isbn = int(isbn)
+                isbn = int(data['isbn'])
                 Textbook.validate_isbn(isbn)
             except ValueError as e:
                 return {"message": str(e)}, 400
 
-            user = User.query.get(user_id)
+            # Verify user exists
+            user = User.query.get(data['user_id'])
             if not user:
                 return {"message": "User not found"}, 404
 
+            # Get or create textbook
             textbook = Textbook.query.filter_by(isbn=isbn).first()
             if not textbook:
                 textbook_data = {
                     'isbn': isbn,
                     'title': data.get('title', ''),
                     'author': data.get('author', ''),
-                    'subject': data.get('subject', '')  # Add subject field here
+                    'subject': data.get('subject', '')
                 }
                 textbook = Textbook(**textbook_data)
                 db.session.add(textbook)
 
-            post = Post(user_id=user_id, textbook=textbook, price=price, condition=condition)
+            # Create post
+            post = Post(
+                user_id=data['user_id'],
+                textbook=textbook,
+                price=data['price'],
+                condition=data['condition'],
+                latitude=latitude,
+                longitude=longitude
+            )
             
+            # Handle image
             image_public_id = data.get('image_public_id')
             if image_public_id:
                 post.img = image_public_id
@@ -197,40 +328,49 @@ class PostResource(Resource):
             db.session.add(post)
             db.session.commit()
 
+            # Prepare response
             post_data = post.to_dict()
             post_data['textbook'] = textbook.to_dict()
             post_data['user'] = user.to_dict()
             post_data['image_url'] = post.image_url
 
-            print("Returning post data:", post_data)
             return post_data, 201
+
         except Exception as e:
             print("Error creating post:", str(e))
             db.session.rollback()
             return {"message": f"Error creating post: {str(e)}"}, 500
 
     def put(self, post_id):
-        print(f"Attempting to update post with id: {post_id}")
-        post = Post.query.get(post_id)
-        if not post:
-            print(f"Post with id {post_id} not found")
-            return {"message": "Post not found"}, 404
-
-        if post.user_id != current_user.id:
-            return {"message": "Unauthorized"}, 401
-
-        data = request.form
-        print("Received data:", data)
-
-        if not data:
-            print("No input data provided")
-            return {"message": "No input data provided"}, 400
-
         try:
+            post = Post.query.get(post_id)
+            if not post:
+                return {"message": "Post not found"}, 404
+
+            if post.user_id != current_user.id:
+                return {"message": "Unauthorized"}, 401
+
+            data = request.form
+            if not data:
+                return {"message": "No input data provided"}, 400
+
             # Store original price for comparison
             original_price = float(post.price)
 
-            # Update post fields
+            # Update location if provided
+            if 'latitude' in data and 'longitude' in data:
+                try:
+                    latitude = float(data['latitude'])
+                    longitude = float(data['longitude'])
+                    if -90 <= latitude <= 90 and -180 <= longitude <= 180:
+                        post.latitude = latitude
+                        post.longitude = longitude
+                    else:
+                        return {"message": "Invalid coordinates"}, 400
+                except ValueError:
+                    return {"message": "Invalid coordinates format"}, 400
+
+            # Update other post fields
             post.price = data.get('price', post.price)
             post.condition = data.get('condition', post.condition)
 
@@ -253,72 +393,75 @@ class PostResource(Resource):
             if image_public_id:
                 post.img = image_public_id
 
-            # Check for price drop and create notifications
+            # Handle price drop notifications
             new_price = float(post.price)
             if new_price < original_price:
-                watchlist_items = Watchlist.query.filter_by(post_id=post_id).all()
-                for item in watchlist_items:
-                    # First, check how many notifications the user has
-                    existing_notifications = Notification.query\
-                        .filter_by(user_id=item.user_id)\
-                        .order_by(Notification.created_at.desc())\
-                        .all()
-                    
-                    # Create the new notification
-                    notification = Notification(
-                        user_id=item.user_id,
-                        post_id=post_id,
-                        message=f"Price dropped for {post.textbook.title} from ${original_price:.2f} to ${new_price:.2f}!"
-                    )
-                    db.session.add(notification)
-                    
-                    # If we'll exceed the limit, remove the oldest notifications
-                    if len(existing_notifications) >= 3:  # Using 3 as the limit
-                        # Keep only the 2 most recent to make room for the new one
-                        notifications_to_delete = existing_notifications[2:]
-                        for old_notification in notifications_to_delete:
-                            db.session.delete(old_notification)
-                    
-                    # Also send email notification
-                    user = User.query.get(item.user_id)
-                    if user:
-                        subject = f"Price Drop Alert: {post.textbook.title}"
-                        body = f"The price of {post.textbook.title} has dropped from ${original_price:.2f} to ${new_price:.2f}. Check it out now!"
-                        recipients = [user.email]
-                        try:
-                            send_email(subject, recipients, body)
-                        except Exception as e:
-                            print(f"Error sending email notification: {str(e)}")
+                self._handle_price_drop_notification(post, original_price, new_price)
 
             db.session.commit()
 
+            # Prepare response
             post_data = post.to_dict()
             post_data['textbook'] = textbook.to_dict()
             post_data['image_url'] = post.image_url
 
-            print("Returning updated post data:", post_data)
             return post_data, 200
                 
         except Exception as e:
             db.session.rollback()
             print("Error updating post:", str(e))
             return {"message": "Error updating post", "error": str(e)}, 500
-    
+
     def delete(self, post_id):
-        post = Post.query.get(post_id)
-        if not post:
-            return {"message": "Post not found"}, 404
-
-        if post.user_id != current_user.id:
-            return {"message": "Unauthorized"}, 401
-
         try:
+            post = Post.query.get(post_id)
+            if not post:
+                return {"message": "Post not found"}, 404
+
+            if post.user_id != current_user.id:
+                return {"message": "Unauthorized"}, 401
+
             db.session.delete(post)
             db.session.commit()
             return {"message": "Post deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
             return {"message": "Error deleting post", "error": str(e)}, 500
+
+    def _handle_price_drop_notification(self, post, original_price, new_price):
+        """Helper method to handle price drop notifications"""
+        watchlist_items = Watchlist.query.filter_by(post_id=post.id).all()
+        for item in watchlist_items:
+            # Check existing notifications count
+            existing_notifications = Notification.query\
+                .filter_by(user_id=item.user_id)\
+                .order_by(Notification.created_at.desc())\
+                .all()
+            
+            # Create new notification
+            notification = Notification(
+                user_id=item.user_id,
+                post_id=post.id,
+                message=f"Price dropped for {post.textbook.title} from ${original_price:.2f} to ${new_price:.2f}!"
+            )
+            db.session.add(notification)
+            
+            # Remove oldest notifications if exceeding limit
+            if len(existing_notifications) >= 3:
+                notifications_to_delete = existing_notifications[2:]
+                for old_notification in notifications_to_delete:
+                    db.session.delete(old_notification)
+            
+            # Send email notification
+            user = User.query.get(item.user_id)
+            if user:
+                subject = f"Price Drop Alert: {post.textbook.title}"
+                body = f"The price of {post.textbook.title} has dropped from ${original_price:.2f} to ${new_price:.2f}. Check it out now!"
+                recipients = [user.email]
+                try:
+                    send_email(subject, recipients, body)
+                except Exception as e:
+                    print(f"Error sending email notification: {str(e)}")
 
 class TextbookResource(Resource):
     def get(self, textbook_id=None):

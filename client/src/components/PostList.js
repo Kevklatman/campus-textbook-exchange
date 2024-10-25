@@ -2,8 +2,17 @@ import React, { useContext } from "react";
 import { Link } from "react-router-dom";
 import { UserContext } from "../contexts/UserContext";
 import { PostContext } from "../contexts/PostContext";
+import { MapPin, Edit2, Trash2, Eye } from 'lucide-react';
 
-function PostList({ posts, onEditPost, onDeletePost, showEditButton, onAddToWatchlist, onRemoveFromWatchlist }) {
+function PostList({ 
+  posts, 
+  onEditPost, 
+  onDeletePost, 
+  showEditButton, 
+  showDistance,
+  onAddToWatchlist, 
+  onRemoveFromWatchlist 
+}) {
   const { user, watchlistPosts } = useContext(UserContext);
 
   const handleWatchlistClick = (postId, textbookId) => {
@@ -28,6 +37,12 @@ function PostList({ posts, onEditPost, onDeletePost, showEditButton, onAddToWatc
               <div className="post-container">
                 <div className="post-header">
                   <span className="post-author">Posted by: {post.user.email}</span>
+                  {showDistance && post.distance !== undefined && (
+                    <span className="post-distance flex items-center text-gray-600">
+                      <MapPin className="w-4 h-4 mr-1" />
+                      {post.distance.toFixed(1)} miles away
+                    </span>
+                  )}
                 </div>
 
                 <div className="post-main-content">
@@ -47,20 +62,34 @@ function PostList({ posts, onEditPost, onDeletePost, showEditButton, onAddToWatc
                       
                       <div className="book-details">
                         <div className="book-meta">
-                          <p className="detail-item"><span className="label">Author:</span> {post.textbook.author}</p>
-                          <p className="detail-item"><span className="label">ISBN:</span> {post.textbook.isbn}</p>
-                          <p className="detail-item price"><span className="label">Price:</span> <span className="amount">${post.price}</span></p>
-                        </div>
-                        <div className="condition">
-                          <span className="condition-label">Condition:</span>
-                          <span className="condition-value">{post.condition}</span>
+                          <p className="detail-item">
+                            <span className="label">Author:</span> {post.textbook.author}
+                          </p>
+                          <p className="detail-item">
+                            <span className="label">ISBN:</span> {post.textbook.isbn}
+                          </p>
+                          <p className="detail-item">
+                            <span className="label">Subject:</span> {post.textbook.subject}
+                          </p>
+                          <p className="detail-item price">
+                            <span className="label">Price:</span> 
+                            <span className="amount">${post.price}</span>
+                          </p>
+                          <div className="condition">
+                            <span className="condition-label">Condition:</span>
+                            <span className="condition-value">{post.condition}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     <div className="post-actions">
                       <div className="action-group">
-                        <Link to={`/posts/${post.id}`} className="action-button view-details">
+                        <Link 
+                          to={`/posts/${post.id}`} 
+                          className="action-button view-details"
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
                           View Details
                         </Link>
                         
@@ -85,6 +114,7 @@ function PostList({ posts, onEditPost, onDeletePost, showEditButton, onAddToWatc
                                   className="action-button edit-post"
                                   onClick={() => onEditPost(post)}
                                 >
+                                  <Edit2 className="w-4 h-4 mr-2" />
                                   Edit Post
                                 </button>
                                 <button
@@ -95,6 +125,7 @@ function PostList({ posts, onEditPost, onDeletePost, showEditButton, onAddToWatc
                                     }
                                   }}
                                 >
+                                  <Trash2 className="w-4 h-4 mr-2" />
                                   Delete Post
                                 </button>
                               </>
@@ -110,7 +141,9 @@ function PostList({ posts, onEditPost, onDeletePost, showEditButton, onAddToWatc
           ))}
         </ul>
       ) : (
-        <p>No posts available.</p>
+        <div className="no-posts-message">
+          <p>No posts available matching your criteria.</p>
+        </div>
       )}
     </div>
   );
