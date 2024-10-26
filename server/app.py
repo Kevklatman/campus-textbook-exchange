@@ -20,17 +20,6 @@ from math import radians, cos, sin, asin, sqrt
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-@app.before_request
-def log_request_info():
-    app_logger.debug('Headers: %s', request.headers)
-    app_logger.debug('Body: %s', request.get_data())
-
-@app.after_request
-def log_response_info(response):
-    app_logger.debug('Response Status: %s', response.status)
-    app_logger.debug('Response Headers: %s', response.headers)
-    return response
-
 configure_uploads(app, images)
 
 login_manager = LoginManager()
@@ -41,15 +30,9 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 def send_email(subject, recipients, body):
-    try:
-        msg = Message(subject, recipients=recipients)
-        msg.body = body
-        mail.send(msg)
-        app_logger.info(f"Email sent successfully to {recipients}")
-        return True
-    except Exception as e:
-        app_logger.error(f"Failed to send email to {recipients}: {str(e)}")
-        return False
+    msg = Message(subject, recipients=recipients)
+    msg.body = body
+    mail.send(msg)
 
 def haversine_distance(lat1, lon1, lat2, lon2):
     """
@@ -373,9 +356,6 @@ class PostResource(Resource):
 
             # Store original price for comparison
             original_price = float(post.price)
-            new_price = float(data.get('price', post.price))
-            
-            app_logger.debug(f"Price comparison - Original: ${original_price:.2f}, New: ${new_price:.2f}")
 
             # Update location if provided
             if 'latitude' in data and 'longitude' in data:
@@ -406,7 +386,6 @@ class PostResource(Resource):
                     Textbook.validate_isbn(isbn)
                     textbook.isbn = isbn
                 except ValueError as e:
-                    print(f"Invalid ISBN: {str(e)}")
                     return {"message": str(e)}, 400
 
             # Handle image update
@@ -419,32 +398,11 @@ class PostResource(Resource):
             if new_price < original_price:
                 self._handle_price_drop_notification(post, original_price, new_price)
 
-Good news! A textbook on your watchlist has dropped in price:
-
-Textbook: {post.textbook.title}
-Author: {post.textbook.author}
-Original Price: ${original_price:.2f}
-New Price: ${new_price:.2f}
-
-You can view the post here: http://localhost:3000/posts/{post_id}
-
-Best regards,
-Campus Textbook Exchange Team
-                                """
-                            )
-                            if email_success:
-                                app_logger.info(f"Price drop email sent to {user.email}")
-                            else:
-                                app_logger.error(f"Failed to send price drop email to {user.email}")
-
-            # Commit all changes
             db.session.commit()
-            app_logger.info(f"Successfully updated post {post_id}")
 
             # Prepare response
             post_data = post.to_dict()
-            post_data['textbook'] = post.textbook.to_dict()
-            post_data['user'] = current_user.to_dict()
+            post_data['textbook'] = textbook.to_dict()
             post_data['image_url'] = post.image_url
 
             return post_data, 200
@@ -668,7 +626,6 @@ class WatchlistResource(Resource):
 
         return watchlist_data, 200
 
-
     def post(self, user_id):
         try:
             data = request.get_json()
@@ -689,51 +646,20 @@ class WatchlistResource(Resource):
             if not post:
                 return {"message": "Post not found"}, 404
 
-            # Send email to post owner
-            if post.user.email:
-                send_email(
-                    subject="New Watchlist Addition - Campus Textbook Exchange",
-                    recipients=[post.user.email],
-                    body=f"""
-Hello {post.user.name or post.user.email},
-
-Someone has added your textbook post to their watchlist!
-
-Textbook: {post.textbook.title}
-Listed Price: ${post.price:.2f}
-
-This means there's active interest in your listing. Make sure your post is up to date!
-
-Best regards,
-Campus Textbook Exchange Team
-                    """
-                )
-
-            # Rest of the watchlist creation logic...
             textbook = Textbook.query.get(textbook_id)
             if not textbook:
                 return {"message": "Textbook not found"}, 404
 
-            watchlist_item = Watchlist.query.filter_by(
-                user_id=user_id, 
-                post_id=post_id, 
-                textbook_id=textbook_id
-            ).first()
-            
+            watchlist_item = Watchlist.query.filter_by(user_id=user_id, post_id=post_id, textbook_id=textbook_id).first()
             if watchlist_item:
                 return {"message": "Item already in watchlist"}, 400
 
-            new_watchlist_item = Watchlist(
-                user_id=user_id, 
-                post_id=post_id, 
-                textbook_id=textbook_id
-            )
+            new_watchlist_item = Watchlist(user_id=user_id, post_id=post_id, textbook_id=textbook_id)
 
             db.session.add(new_watchlist_item)
             db.session.commit()
 
             return new_watchlist_item.to_dict(), 201
-
         except Exception as e:
             db.session.rollback()
             logging.error(f"Error adding item to watchlist: {str(e)}")
@@ -781,83 +707,6 @@ class CheckSessionResource(Resource):
         except Exception as e:
             logger.error(f"Error in check_session: {str(e)}")
             return {'error': 'Internal Server Error'}, 500
-
-class LoginResource(Resource):
-    def post(self):
-        try:
-            # Log the raw request data for debugging
-            app_logger.debug(f"Raw request data: {request.get_data()}")
-            app_logger.debug(f"Request content type: {request.content_type}")
-            app_logger.debug(f"Request headers: {request.headers}")
-            
-            data = request.get_json()
-            app_logger.debug(f"Parsed JSON data: {data}")
-            
-            if not data:
-                app_logger.warning("No input data provided for login")
-                return {"message": "No input data provided"}, 400
-
-            email = data.get('email')
-            password = data.get('password')
-            remember = data.get('remember', False)
-
-            app_logger.debug(f"Login attempt - Email: {email}, Remember: {remember}")
-
-            if not email or not password:
-                app_logger.warning(f"Missing credentials - Email present: {bool(email)}, Password present: {bool(password)}")
-                return {"message": "Email and password are required"}, 400
-
-            user = User.query.filter_by(email=email).first()
-            
-            if not user:
-                app_logger.warning(f"No user found with email: {email}")
-                return {"message": "Invalid email or password"}, 401
-
-            app_logger.debug(f"User found: {user.email}")
-            
-            if user.authenticate(password):
-                app_logger.info(f"Login successful for user: {user.email}")
-                login_user(user, remember=remember)
-                if remember:
-                    session.permanent = True
-                    app_logger.debug("Set permanent session")
-                
-                # Log the response data
-                response_data = user.to_dict()
-                app_logger.debug(f"Sending response data: {response_data}")
-                return response_data, 200
-            else:
-                app_logger.warning(f"Password verification failed for user: {user.email}")
-                return {"message": "Invalid email or password"}, 401
-                
-        except Exception as e:
-            app_logger.error(f"Login error: {str(e)}", exc_info=True)
-            return {"message": "An error occurred during login"}, 500
-
-class LogoutResource(Resource):
-    def post(self):
-        try:
-            logout_user()
-            session.clear()
-            
-            # Create a response dictionary
-            response_data = {"message": "Logged out successfully"}
-            
-            # Create the response with Flask-RESTful
-            response = jsonify(response_data)
-            
-            # Set cookie deletion headers
-            response.set_cookie('session', '', expires=0)
-            response.set_cookie('remember_token', '', expires=0)
-            response.set_cookie('session', '', domain=None, expires=0)
-            response.set_cookie('remember_token', '', domain=None, expires=0)
-            
-            app_logger.info(f"User successfully logged out")
-            return response
-            
-        except Exception as e:
-            app_logger.error(f"Logout error: {str(e)}", exc_info=True)
-            return {"message": "Error during logout"}, 500
 
 class SignupResource(Resource):
     def post(self):
@@ -913,7 +762,7 @@ class SignupResource(Resource):
 
         except Exception as e:
             db.session.rollback()
-            app_logger.error(f"Error during user signup: {str(e)}", exc_info=True)
+            logger.error(f"Error during user signup: {str(e)}")
             return {"message": f"An error occurred while creating the user: {str(e)}"}, 500
 
 
@@ -1013,59 +862,7 @@ class NotificationResource(Resource):
 
         
 
-from flask import current_app
-from flask_mail import Message
 
-def send_email(subject, recipients, body):
-    """
-    Send email with proper application context handling.
-    """
-    if not current_app:
-        app_logger.error("No application context - email cannot be sent")
-        return False
-        
-    try:
-        msg = Message(
-            subject,
-            sender=current_app.config['MAIL_DEFAULT_SENDER'],
-            recipients=recipients if isinstance(recipients, list) else [recipients]
-        )
-        msg.body = body
-        
-        app_logger.info(f"Attempting to send email to {recipients}")
-        mail.send(msg)
-        app_logger.info(f"Email sent successfully to {recipients}")
-        return True
-        
-    except Exception as e:
-        app_logger.error(f"Failed to send email: {str(e)}")
-        return False
-
-# Test route with application context
-@app.route('/test_email')
-def test_email():
-    with app.app_context():
-        try:
-            success = send_email(
-                'Test Email',
-                'your-test-email@example.com',
-                'This is a test email from the Campus Textbook Exchange system.'
-            )
-            if success:
-                return 'Email sent successfully', 200
-            return 'Failed to send email', 500
-        except Exception as e:
-            app_logger.error(f"Test email error: {str(e)}")
-            return f'Error: {str(e)}', 500
-
-# For testing in Python shell
-def test_email_shell():
-    with app.app_context():
-        return send_email(
-            'Test Email',
-            'your-test-email@example.com',
-            'This is a test email from the Campus Textbook Exchange system.'
-        )
 
 
 
@@ -1087,4 +884,3 @@ api.add_resource(NotificationResource,
 api.add_resource(UserResource, '/users', '/users/<int:user_id>')
 if __name__ == '__main__':
     app.run(debug=True)
-
