@@ -1,12 +1,13 @@
-// src/components/Navbar.js
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { UserContext } from '../contexts/UserContext';
+import { PostContext } from '../contexts/PostContext';
 import NotificationBell from './NotificationBell';
 import '../index.css';
 
 function Navbar() {
   const { user, logout } = useContext(UserContext);
+  const postContext = useContext(PostContext); // Make PostContext available to children
 
   return (
     <nav className="navbar">

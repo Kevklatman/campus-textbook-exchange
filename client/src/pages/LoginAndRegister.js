@@ -1,9 +1,9 @@
-// src/pages/LoginAndRegister.js
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";  // Added useEffect import
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { UserContext } from "../contexts/UserContext";
 import { useHistory } from "react-router-dom";
+
 
 const LoginSchema = Yup.object().shape({
   email: Yup.string()
@@ -15,7 +15,9 @@ const LoginSchema = Yup.object().shape({
 });
 
 const RegisterSchema = Yup.object().shape({
-  name: Yup.string().required("Required"),
+  name: Yup.string()
+    .min(2, "Name must be at least 2 characters")
+    .required("Required"),
   email: Yup.string()
     .email("Invalid email")
     .required("Required")
@@ -25,68 +27,115 @@ const RegisterSchema = Yup.object().shape({
     .required("Required"),
 });
 
-  function LoginAndRegister() {
-    const { login } = useContext(UserContext);
-    const history = useHistory();
-    const [error, setError] = useState(null);
-  
-    const handleLogin = async (values, { setSubmitting }) => {
-      setError(null);
+function LoginAndRegister() {
+  const { login } = useContext(UserContext);
+  const history = useHistory();
+  const [error, setError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [csrfToken, setCsrfToken] = useState(null);
+
+  useEffect(() => {
+    // Fetch CSRF token when component mounts
+    const fetchCsrfToken = async () => {
       try {
-        const response = await fetch("/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: 'include', // Add this line
-          body: JSON.stringify(values),
+        const response = await fetch('/csrf_token', {
+          credentials: 'include',
         });
-        
-        if (!response.ok) {
+        if (response.ok) {
           const data = await response.json();
-          throw new Error(data.message || "Login failed");
+          setCsrfToken(data.csrf_token);
         }
-        
-        const userData = await response.json();
-        await login(userData); // Await the login function
-        history.push("/");
       } catch (error) {
-        console.error("Login error:", error);
-        setError(error.message);
-      } finally {
-        setSubmitting(false);
-      }
-    };
-  
-    const handleSignup = async (values, { setSubmitting }) => {
-      try {
-        const response = await fetch("/signup", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: 'include', // Add this line
-          body: JSON.stringify(values),
-        });
-  
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Registration failed");
-        }
-  
-        const userData = await response.json();
-        await login(userData); // Await the login function
-        history.push("/");
-      } catch (error) {
-        setError(error.message);
-      } finally {
-        setSubmitting(false);
+        console.error('Error fetching CSRF token:', error);
       }
     };
 
+    fetchCsrfToken();
+  }, []);
+
+  // Added back handleLogin function
+  const handleLogin = async (values, { setSubmitting, setFieldError }) => {
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      // Get the CSRF token from the cookie
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='))
+        ?.split('=')[1];
+
+      const success = await login({
+        ...values,
+        headers: {
+          'X-CSRF-Token': token || csrfToken
+        }
+      });
+      
+      if (success) {
+        history.push("/");
+      } else {
+        setError("Invalid email or password");
+        setFieldError('email', ' ');
+        setFieldError('password', ' ');
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      setError(error.message || "An error occurred during login");
+    } finally {
+      setSubmitting(false);
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSignup = async (values, { setSubmitting, setFieldError }) => {
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='))
+        ?.split('=')[1];
+
+      const response = await fetch("/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": token || csrfToken
+        },
+        credentials: 'include',
+        body: JSON.stringify(values),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.message?.includes("Email already exists")) {
+          setFieldError('email', 'Email already registered');
+        } else {
+          throw new Error(data.message || "Registration failed");
+        }
+        return;
+      }
+
+      // User is now automatically logged in from the backend
+      // Just redirect to home page
+      history.push("/");
+
+    } catch (error) {
+      console.error("Registration error:", error);
+      setError(error.message || "An error occurred during registration");
+    } finally {
+      setSubmitting(false);
+      setIsSubmitting(false);
+    }
+  };
   return (
     <div className="login-register">
-      {error && <div className="error-message">{error}</div>}
+      {error && (
+        <div className="error-message" role="alert">
+          {error}
+        </div>
+      )}
       
       <div className="login-form">
         <h2>Login</h2>
@@ -94,12 +143,12 @@ const RegisterSchema = Yup.object().shape({
           initialValues={{ 
             email: "", 
             password: "",
-            remember: false 
+            remember: true 
           }}
           validationSchema={LoginSchema}
           onSubmit={handleLogin}
         >
-          {({ isSubmitting }) => (
+          {({ isSubmitting: formIsSubmitting }) => (
             <Form>
               <div className="form-group">
                 <label htmlFor="loginEmail">Email</label>
@@ -107,9 +156,16 @@ const RegisterSchema = Yup.object().shape({
                   type="email" 
                   name="email" 
                   id="loginEmail"
-                  placeholder="university.email@school.edu" 
+                  className="form-control"
+                  placeholder="university.email@school.edu"
+                  disabled={isSubmitting}
+                  autoComplete="email"
                 />
-                <ErrorMessage name="email" component="div" className="error" />
+                <ErrorMessage 
+                  name="email" 
+                  component="div" 
+                  className="error" 
+                />
               </div>
 
               <div className="form-group">
@@ -118,9 +174,16 @@ const RegisterSchema = Yup.object().shape({
                   type="password" 
                   name="password" 
                   id="loginPassword"
-                  placeholder="Enter your password" 
+                  className="form-control"
+                  placeholder="Enter your password"
+                  disabled={isSubmitting}
+                  autoComplete="current-password"
                 />
-                <ErrorMessage name="password" component="div" className="error" />
+                <ErrorMessage 
+                  name="password" 
+                  component="div" 
+                  className="error" 
+                />
               </div>
 
               <div className="form-group checkbox-group">
@@ -129,17 +192,18 @@ const RegisterSchema = Yup.object().shape({
                     type="checkbox" 
                     name="remember" 
                     className="remember-checkbox"
+                    disabled={isSubmitting}
                   />
-                  <span>Remember me</span>
+                  <span>Keep me signed in</span>
                 </label>
               </div>
 
               <button 
                 type="submit" 
                 className="btn btn-success" 
-                disabled={isSubmitting}
+                disabled={formIsSubmitting || isSubmitting}
               >
-                {isSubmitting ? "Logging in..." : "Login"}
+                {formIsSubmitting ? "Logging in..." : "Login"}
               </button>
             </Form>
           )}
@@ -157,17 +221,24 @@ const RegisterSchema = Yup.object().shape({
           validationSchema={RegisterSchema}
           onSubmit={handleSignup}
         >
-          {({ isSubmitting }) => (
+          {({ isSubmitting: formIsSubmitting }) => (
             <Form>
               <div className="form-group">
-                <label htmlFor="signupName">Name</label>
+                <label htmlFor="signupName">Full Name</label>
                 <Field 
                   type="text" 
                   name="name" 
                   id="signupName"
-                  placeholder="Enter your full name" 
+                  className="form-control"
+                  placeholder="Enter your full name"
+                  disabled={isSubmitting}
+                  autoComplete="name"
                 />
-                <ErrorMessage name="name" component="div" className="error" />
+                <ErrorMessage 
+                  name="name" 
+                  component="div" 
+                  className="error" 
+                />
               </div>
 
               <div className="form-group">
@@ -176,9 +247,16 @@ const RegisterSchema = Yup.object().shape({
                   type="email" 
                   name="email" 
                   id="signupEmail"
-                  placeholder="university.email@school.edu" 
+                  className="form-control"
+                  placeholder="university.email@school.edu"
+                  disabled={isSubmitting}
+                  autoComplete="email"
                 />
-                <ErrorMessage name="email" component="div" className="error" />
+                <ErrorMessage 
+                  name="email" 
+                  component="div" 
+                  className="error" 
+                />
               </div>
 
               <div className="form-group">
@@ -187,17 +265,24 @@ const RegisterSchema = Yup.object().shape({
                   type="password" 
                   name="password" 
                   id="signupPassword"
-                  placeholder="Minimum 6 characters" 
+                  className="form-control"
+                  placeholder="Minimum 6 characters"
+                  disabled={isSubmitting}
+                  autoComplete="new-password"
                 />
-                <ErrorMessage name="password" component="div" className="error" />
+                <ErrorMessage 
+                  name="password" 
+                  component="div" 
+                  className="error" 
+                />
               </div>
 
               <button 
                 type="submit" 
                 className="btn btn-success" 
-                disabled={isSubmitting}
+                disabled={formIsSubmitting || isSubmitting}
               >
-                {isSubmitting ? "Signing up..." : "Sign Up"}
+                {formIsSubmitting ? "Creating Account..." : "Create Account"}
               </button>
             </Form>
           )}

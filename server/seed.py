@@ -11,6 +11,10 @@ from config import CLOUDINARY_UPLOAD_PRESET, cloudinary
 import time
 from sqlalchemy.exc import IntegrityError
 from io import BytesIO
+from random import uniform
+from math import radians, cos
+
+
 
 fake = Faker()
 
@@ -165,6 +169,32 @@ BOOK_TITLES = {
         "Psychology: From Inquiry to Understanding"
     ]
 }
+UNIVERSITY_LOCATIONS = {
+    # Format: (latitude, longitude, radius_in_miles)
+    'New York University': (40.7291, -73.9965, 5),
+    'UCLA': (34.0689, -118.4452, 5),
+    'University of Chicago': (41.7886, -87.5987, 5),
+    'Boston University': (42.3505, -71.1054, 5),
+    'University of Texas Austin': (30.2849, -97.7341, 5),
+    'Stanford University': (37.4275, -122.1697, 5),
+    'University of Michigan': (42.2780, -83.7382, 5),
+    'University of Washington': (47.6553, -122.3035, 5)
+}
+
+def generate_random_location():
+    """Generate a random location near a university"""
+    university = rc(list(UNIVERSITY_LOCATIONS.keys()))
+    lat, lng, radius = UNIVERSITY_LOCATIONS[university]
+    
+    # Convert radius from miles to degrees (approximate)
+    lat_radius = radius / 69  # 1 degree latitude = ~69 miles
+    lng_radius = radius / (69 * cos(radians(lat)))  # Adjust for longitude
+    
+    # Generate random offset within radius
+    lat_offset = uniform(-lat_radius, lat_radius)
+    lng_offset = uniform(-lng_radius, lng_radius)
+    
+    return lat + lat_offset, lng + lng_offset, university
 
 def get_subject_image(subject):
     """Get a random book cover for a specific subject"""
@@ -265,7 +295,7 @@ def download_image(url):
         return None
 
 def seed_posts(users, textbooks, num_posts=30):
-    """Create posts with real textbook covers"""
+    """Create posts with real textbook covers and locations"""
     print("🌱 Seeding posts...")
     posts = []
     retry_count = 3
@@ -276,7 +306,9 @@ def seed_posts(users, textbooks, num_posts=30):
             current_url = get_subject_image(textbook.subject)
             image_public_id = None
             
-            print(f"\n📚 Processing image for {textbook.title}")
+            # Generate location data
+            latitude, longitude, university = generate_random_location()
+            print(f"\n📚 Processing post for {textbook.title} near {university}")
             
             # Try main URL first, then fallbacks if it fails
             urls_to_try = [current_url] + TEXTBOOK_COVER_FALLBACKS.get(textbook.subject, [])
@@ -296,31 +328,34 @@ def seed_posts(users, textbooks, num_posts=30):
                         
                         image_public_id = upload_result['public_id']
                         print(f"✅ Upload successful! Public ID: {image_public_id}")
-                        break  # Exit the URL loop if successful
+                        break
                         
                     except Exception as e:
                         print(f"⚠️ Upload failed: {str(e)}")
-                        continue  # Try next URL if upload fails
+                        continue
                 else:
                     print(f"⚠️ Failed to download image from {url}")
-                    continue  # Try next URL if download fails
+                    continue
             
             if not image_public_id:
                 print("❌ All image URLs failed")
 
-            # Create post even if image upload failed
+            # Create post with location data
             post = Post(
                 textbook_id=textbook.id,
                 user_id=rc(users).id,
                 price=randint(20, 200),
                 condition=rc(['New', 'Like New', 'Very Good', 'Good', 'Acceptable']),
                 created_at=fake.date_time_this_year(),
-                img=image_public_id
+                img=image_public_id,
+                latitude=latitude,
+                longitude=longitude
             )
             posts.append(post)
             db.session.add(post)
             db.session.commit()
             print(f"✅ Created post for: {textbook.title}")
+            print(f"📍 Location: {latitude:.4f}, {longitude:.4f} (near {university})")
             
         except Exception as e:
             db.session.rollback()
@@ -329,7 +364,7 @@ def seed_posts(users, textbooks, num_posts=30):
     return posts
 
 def seed_comments(users, posts, num_comments=50):
-    """Create realistic comments for posts"""
+    """Create realistic comments for posts with location context"""
     print("🌱 Seeding comments...")
     comment_templates = [
         "Is this still available?",
@@ -341,7 +376,10 @@ def seed_comments(users, posts, num_comments=50):
         "Can you meet on campus?",
         "Do you have any other books for {}?",
         "Is this the latest edition?",
-        "Does it come with the access code?"
+        "Does it come with the access code?",
+        "Can we meet somewhere near {}?",  # New template for location
+        "I'm at {}. Is that too far to meet?",  # New template for location
+        "Are you close to {}?"  # New template for location
     ]
     
     for i in range(num_comments):
@@ -350,6 +388,9 @@ def seed_comments(users, posts, num_comments=50):
             if "{}" in template:
                 if "price" in template.lower():
                     text = template.format(f"${randint(20, 150)}")
+                elif any(location_phrase in template.lower() for location_phrase in ["near", "at", "close to"]):
+                    university = rc(list(UNIVERSITY_LOCATIONS.keys()))
+                    text = template.format(university)
                 else:
                     text = template.format(rc(SUBJECTS))
             else:
