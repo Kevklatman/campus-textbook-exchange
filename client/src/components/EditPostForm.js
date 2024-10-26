@@ -41,9 +41,7 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
     document.body.appendChild(script);
 
     return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
+      document.body.removeChild(script);
     };
   }, []);
 
@@ -56,13 +54,11 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setError(null);
-    
     if (name === 'title' || name === 'author' || name === 'isbn' || name === 'subject') {
       setEditedPost(prevPost => ({
         ...prevPost,
         textbook: {
-          ...prev.textbook,
+          ...prevPost.textbook,
           [name]: value,
         },
       }));
@@ -185,8 +181,6 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
     if (newImage) {
       formData.append('image_public_id', newImage);
     }
-
-    setIsSubmitting(true);
 
     try {
       const response = await fetch(`/posts/${editedPost.id}`, {
@@ -388,118 +382,7 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
             </div>
           </form>
         </div>
-
-        <div className="form-group">
-          <label htmlFor="author">Author:</label>
-          <input
-            type="text"
-            id="author"
-            name="author"
-            value={editedPost.textbook.author || ''}
-            onChange={handleChange}
-            disabled={isSubmitting}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="isbn">ISBN:</label>
-          <input
-            type="text"
-            id="isbn"
-            name="isbn"
-            value={editedPost.textbook.isbn || ''}
-            onChange={handleChange}
-            disabled={isSubmitting}
-            placeholder="13-digit ISBN"
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="subject">Subject:</label>
-          <select
-            id="subject"
-            name="subject"
-            value={editedPost.textbook.subject || ''}
-            onChange={handleChange}
-            disabled={isSubmitting}
-          >
-            <option value="">Select subject</option>
-            {subjectOptions.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="price">Price:</label>
-          <input
-            type="number"
-            id="price"
-            name="price"
-            value={editedPost.price || ''}
-            onChange={handleChange}
-            disabled={isSubmitting}
-            min="0"
-            step="0.01"
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="condition">Condition:</label>
-          <select
-            id="condition"
-            name="condition"
-            value={editedPost.condition || ''}
-            onChange={handleChange}
-            disabled={isSubmitting}
-          >
-            <option value="">Select condition</option>
-            {conditionOptions.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <button 
-            type="button" 
-            onClick={handleImageUpload} 
-            className="btn btn-secondary"
-            disabled={isSubmitting}
-          >
-            {newImage ? 'Change Image' : 'Change Cover Image'}
-          </button>
-          {(newImage || editedPost.image_url) && (
-            <div className="image-preview">
-              <img 
-                src={newImage ? 
-                  `https://res.cloudinary.com/duhjluee1/image/upload/${newImage}` 
-                  : editedPost.image_url
-                } 
-                alt="Post cover" 
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="form-actions">
-          <button 
-            type="submit" 
-            className="btn btn-success"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
-          </button>
-          <button 
-            type="button" 
-            className="btn btn-secondary" 
-            onClick={onCancel}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 }
