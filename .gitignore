@@ -14,10 +14,15 @@ instance/
 # Environment
 .env
 .venv
-env/
+env/ * Serving Flask app 'config'
+ * Debug mode: on
+
 venv/
 
 # Dependencies
 node_modules/
 
 *.pyc
+
+config.py
+
