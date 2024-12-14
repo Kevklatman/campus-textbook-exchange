@@ -1,0 +1,23 @@
+# Cache files
+__pycache__/
+.cache/
+*.cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Database
+*.db
+instance/
+*.sqlite3
+
+# Environment
+.env
+.venv
+env/
+venv/
+
+# Dependencies
+node_modules/
+
+*.pyc
