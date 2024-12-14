@@ -20,4 +20,4 @@ venv/
 # Dependencies
 node_modules/
 
-*.pyc
+.pyc
