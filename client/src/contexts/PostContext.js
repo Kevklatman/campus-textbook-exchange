@@ -6,19 +6,19 @@ export const PostContext = createContext();
 
 export const PostProvider = ({ children }) => {
   const [posts, setPosts] = useState([]);
-  const { fetchNotifications, user } = React.useContext(UserContext);
+  const { fetchNotifications, user, makeRequest } = React.useContext(UserContext);
 
   const fetchAllPosts = useCallback(async () => {
     try {
-      const response = await fetch('/posts', {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      setPosts(data);
+      const response = await makeRequest('/posts');
+      if (response.ok) {
+        const data = await response.json();
+        setPosts(data);
+      }
     } catch (error) {
       console.error('Error fetching all posts:', error);
     }
-  }, []);
+  }, [makeRequest]);
 
   useEffect(() => {
     fetchAllPosts();
@@ -30,10 +30,9 @@ export const PostProvider = ({ children }) => {
 
   const updatePost = async (postId, updatedPostData) => {
     try {
-      const response = await fetch(`/posts/${postId}`, {
+      const response = await makeRequest(`/posts/${postId}`, {
         method: 'PUT',
-        body: updatedPostData,
-        credentials: 'include',
+        body: updatedPostData
       });
 
       if (!response.ok) {
@@ -61,9 +60,8 @@ export const PostProvider = ({ children }) => {
 
   const deletePost = async (postId) => {
     try {
-      const response = await fetch(`/posts/${postId}`, { 
-        method: 'DELETE',
-        credentials: 'include'
+      const response = await makeRequest(`/posts/${postId}`, { 
+        method: 'DELETE'
       });
       
       if (response.ok) {

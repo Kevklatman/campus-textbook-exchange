@@ -357,34 +357,31 @@ class PostResource(Resource):
             # Store original price for comparison
             original_price = float(post.price)
 
-            # Update location if provided
-            if 'latitude' in data and 'longitude' in data:
+            # Update post fields
+            if 'price' in data:
                 try:
-                    latitude = float(data['latitude'])
-                    longitude = float(data['longitude'])
-                    if -90 <= latitude <= 90 and -180 <= longitude <= 180:
-                        post.latitude = latitude
-                        post.longitude = longitude
-                    else:
-                        return {"message": "Invalid coordinates"}, 400
+                    post.price = float(data['price'])
                 except ValueError:
-                    return {"message": "Invalid coordinates format"}, 400
-
-            # Update other post fields
-            post.price = data.get('price', post.price)
-            post.condition = data.get('condition', post.condition)
+                    return {"message": "Invalid price format"}, 400
+                    
+            if 'condition' in data:
+                post.condition = data['condition']
 
             # Update textbook fields
             textbook = post.textbook
-            textbook.title = data.get('title', textbook.title)
-            textbook.author = data.get('author', textbook.author)
-            textbook.subject = data.get('subject', textbook.subject)
+            if 'title' in data:
+                textbook.title = data['title']
+            if 'author' in data:
+                textbook.author = data['author']
+            if 'subject' in data:
+                textbook.subject = data['subject']
             
             if 'isbn' in data:
                 try:
-                    isbn = int(data['isbn'])
-                    Textbook.validate_isbn(isbn)
-                    textbook.isbn = isbn
+                    isbn = str(data['isbn']).strip()
+                    if isbn:  # Only validate if ISBN is provided
+                        Textbook.validate_isbn(isbn)
+                        textbook.isbn = isbn
                 except ValueError as e:
                     return {"message": str(e)}, 400
 
@@ -398,11 +395,17 @@ class PostResource(Resource):
             if new_price < original_price:
                 self._handle_price_drop_notification(post, original_price, new_price)
 
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                print("Database error:", str(e))
+                return {"message": "Database error occurred"}, 500
 
             # Prepare response
             post_data = post.to_dict()
             post_data['textbook'] = textbook.to_dict()
+            post_data['user'] = post.user.to_dict()
             post_data['image_url'] = post.image_url
 
             return post_data, 200
@@ -680,12 +683,38 @@ class WatchlistResource(Resource):
             return {"message": "Internal Server Error", "error": str(e)}, 500
 class LogoutResource(Resource):
     def post(self):
-        logout_user()
-        session.clear()
-        response = Response({"message": "Logged out successfully"}, 200)
-        response.delete_cookie('session')
-        response.delete_cookie('remember_token')
-        return response
+        try:
+            if current_user.is_authenticated or 'user_id' in session:
+                # Clear Flask-Login state
+                logout_user()
+                
+                # Clear all session data
+                session.clear()
+                
+                # Prepare response with new CSRF token for future requests
+                response = make_response({"message": "Logged out successfully"}, 200)
+                
+                # Clear all auth-related cookies
+                response.delete_cookie('session', path='/')
+                response.delete_cookie('remember_token', path='/')
+                response.delete_cookie('csrf_token', path='/')
+                
+                # Set a new CSRF token for future requests
+                token = generate_csrf()
+                response.set_cookie(
+                    'csrf_token',
+                    token,
+                    secure=True,
+                    httponly=False,
+                    samesite='Lax',
+                    path='/'
+                )
+                
+                return response
+            return {"message": "No user to logout"}, 401
+        except Exception as e:
+            logger.error(f"Error in logout: {str(e)}")
+            return {"message": "Error during logout"}, 500
 
 class CheckSessionResource(Resource):
     def get(self):
@@ -769,46 +798,61 @@ class SignupResource(Resource):
 
 class LoginResource(Resource):
     def post(self):
-        data = request.get_json()
-        
-        if not data:
-            logger.warning("No input data provided for login")
-            return {"message": "No input data provided"}, 400
-
-        email = data.get('email')
-        password = data.get('password')
-        remember = data.get('remember', True)
-
-        if not email or not password:
-            logger.warning("Email or password missing in login attempt")
-            return {"message": "Email and password are required"}, 400
-
-        user = User.query.filter_by(email=email).first()
-
-        if user and user.authenticate(password):
-            login_user(user, remember=remember)
-            session.permanent = True
-            session['user_id'] = user.id
+        try:
+            data = request.get_json()
             
-            # Generate new CSRF token
-            token = generate_csrf()
-            session['csrf_token'] = token
-            
-            response = make_response(user.to_dict(), 200)
-            response.set_cookie(
-                'csrf_token',
-                token,
-                secure=True,
-                httponly=False,
-                samesite='Lax',
-                path='/',
-                max_age=3600
-            )
-            return response
-        else:
-            logger.warning(f"Failed login attempt for user: {email}")
-            return {"message": "Invalid email or password"}, 401
+            if not data:
+                logger.warning("No input data provided for login")
+                return {"message": "No input data provided"}, 400
 
+            email = data.get('email')
+            password = data.get('password')
+            remember = data.get('remember', True)
+
+            if not email or not password:
+                logger.warning("Email or password missing in login attempt")
+                return {"message": "Email and password are required"}, 400
+
+            user = User.query.filter_by(email=email).first()
+
+            if user and user.authenticate(password):
+                login_user(user, remember=remember)
+                session.permanent = True
+                session['user_id'] = user.id
+                
+                # Generate new CSRF token
+                token = generate_csrf()
+                session['csrf_token'] = token
+                
+                # Create response with user data
+                response = make_response(jsonify({
+                    **user.to_dict(),
+                    'csrf_token': token,
+                    'logged_in': True
+                }), 200)
+                
+                # Set cookies
+                response.set_cookie(
+                    'csrf_token',
+                    token,
+                    secure=True,
+                    httponly=False,
+                    samesite='Lax',
+                    path='/',
+                    max_age=3600
+                )
+                
+                # Ensure session is saved
+                session.modified = True
+                
+                return response
+            else:
+                logger.warning(f"Failed login attempt for user: {email}")
+                return {"message": "Invalid email or password"}, 401
+                
+        except Exception as e:
+            logger.error(f"Error in login: {str(e)}")
+            return {"message": "Error during login", "error": str(e)}, 500
 
 class NotificationResource(Resource):
     MAX_NOTIFICATIONS = 3  

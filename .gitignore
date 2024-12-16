@@ -12,7 +12,7 @@ __pycache__/
 instance/
 *.sqlite3
 
-# Environment
+# Environment and Configuration
 .env
 .venv
 env/
@@ -20,6 +20,3 @@ venv/
 
 # Dependencies
 node_modules/
-
-# Configuration
-server/config.py

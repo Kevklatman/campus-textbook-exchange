@@ -1,9 +1,10 @@
 # Standard library imports
+from dotenv import load_dotenv
 import logging
 from logging.handlers import RotatingFileHandler
 import os
 import secrets
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
@@ -17,21 +18,23 @@ from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
 from datetime import timedelta
 from flask_session import Session
 
-# Generate strong secret keys
-SECRET_KEY = secrets.token_hex(32)
-WTF_CSRF_SECRET_KEY = secrets.token_hex(32)
+# Load environment variables
+load_dotenv()
 
 # Instantiate app
 app = Flask(__name__)
 
+# Set port
+port = int(os.environ.get('FLASK_RUN_PORT', 5555))
+
 # All configuration settings in one app.config.update call
 app.config.update(
     # Secret keys
-    SECRET_KEY=SECRET_KEY,
-    WTF_CSRF_SECRET_KEY=WTF_CSRF_SECRET_KEY,
+    SECRET_KEY=os.environ.get('SECRET_KEY'),
+    WTF_CSRF_SECRET_KEY=os.environ.get('WTF_CSRF_SECRET_KEY'),
 
     # Database configuration
-    SQLALCHEMY_DATABASE_URI='sqlite:///app.db',
+    SQLALCHEMY_DATABASE_URI=os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///app.db'),
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
     
     # Enhanced Session settings
@@ -51,17 +54,17 @@ app.config.update(
     WTF_CSRF_METHODS={'POST', 'PUT', 'PATCH', 'DELETE'},
 
     # Upload settings
-    UPLOADED_IMAGES_DEST='uploads/images',
+    UPLOADED_IMAGES_DEST=os.environ.get('UPLOADED_IMAGES_DEST', 'uploads/images'),
     MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max file size
     
     # Mail settings
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_PORT=465,
-    MAIL_USE_TLS=False,
-    MAIL_USE_SSL=True,
-    MAIL_USERNAME='campustextbookexchange@gmail.com',
-    MAIL_PASSWORD='bkrb couo vrqn gdsq',
-    MAIL_DEFAULT_SENDER='campustextbookexchange@gmail.com',
+    MAIL_SERVER=os.environ.get('MAIL_SERVER', 'smtp.gmail.com'),
+    MAIL_PORT=int(os.environ.get('MAIL_PORT', 465)),
+    MAIL_USE_TLS=os.environ.get('MAIL_USE_TLS', 'False').lower() == 'true',
+    MAIL_USE_SSL=os.environ.get('MAIL_USE_SSL', 'True').lower() == 'true',
+    MAIL_USERNAME=os.environ.get('MAIL_USERNAME'),
+    MAIL_PASSWORD=os.environ.get('MAIL_PASSWORD'),
+    MAIL_DEFAULT_SENDER=os.environ.get('MAIL_DEFAULT_SENDER'),
     
     # JSON settings
     JSON_SORT_KEYS=False,
@@ -100,6 +103,19 @@ CORS(app, resources={
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
+
+# Add CSRF token route
+@app.route('/api/csrf-token', methods=['GET'])
+def get_csrf():
+    token = generate_csrf()
+    response = jsonify({'csrf_token': token})
+    return response
+
+# Handle CSRF errors
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    return jsonify({'error': 'CSRF token missing or incorrect'}), 400
+
 csrf.exempt('csrf_token')  # Exempt the token route
 
 # Configure uploads
@@ -113,41 +129,34 @@ db.init_app(app)
 
 # Cloudinary configuration
 cloudinary.config(
-    cloud_name="duhjluee1",
-    api_key="247538451127763",
-    api_secret="oP9Qkj-5_o8fk8SGx0A8pybDtGs"
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET')
 )
 
-CLOUDINARY_UPLOAD_PRESET = "unsigned"
+CLOUDINARY_UPLOAD_PRESET = os.environ.get('CLOUDINARY_UPLOAD_PRESET')
 
-# Create logs directory if it doesn't exist
+# Configure logging
 if not os.path.exists('logs'):
     os.makedirs('logs')
 
-# Configure logging
 logging.basicConfig(level=logging.DEBUG)
 app_logger = logging.getLogger('app')
 app_logger.setLevel(logging.DEBUG)
-
-# Prevent duplicate logs
 app_logger.propagate = False
 
-# Create handlers
 file_handler = RotatingFileHandler('logs/app.log', maxBytes=10240, backupCount=10, encoding='utf-8')
 console_handler = logging.StreamHandler()
 
-# Create formatters and add it to handlers
 log_format = logging.Formatter(
     '%(asctime)s %(levelname)s [%(name)s] %(message)s [in %(pathname)s:%(lineno)d]'
 )
 file_handler.setFormatter(log_format)
 console_handler.setFormatter(log_format)
 
-# Add handlers to the logger
 app_logger.addHandler(file_handler)
 app_logger.addHandler(console_handler)
 
-# Set log levels based on app environment
 if app.debug:
     file_handler.setLevel(logging.DEBUG)
     console_handler.setLevel(logging.DEBUG)
@@ -158,4 +167,3 @@ else:
     app_logger.info('Running in production mode')
 
 app_logger.info('Application initialization completed')
-

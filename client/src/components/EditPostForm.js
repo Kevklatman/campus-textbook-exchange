@@ -4,7 +4,7 @@ import { PostContext } from '../contexts/PostContext';
 import { useHistory } from 'react-router-dom';
 
 function EditPostForm({ post, onUpdatePost, onCancel }) {
-  const { user, csrfToken } = useContext(UserContext);
+  const { user, csrfToken, makeRequest } = useContext(UserContext);
   const { updatePost } = useContext(PostContext);
   const history = useHistory();
 
@@ -171,25 +171,30 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
     }
 
     const formData = new FormData();
-    formData.append('csrf_token', csrfToken);
-    formData.append('price', editedPost.price);
+    
+    // Post data
+    formData.append('price', editedPost.price.toString());
     formData.append('condition', editedPost.condition);
+    
+    // Textbook data
     formData.append('title', editedPost.textbook.title);
     formData.append('author', editedPost.textbook.author);
     formData.append('isbn', editedPost.textbook.isbn);
     formData.append('subject', editedPost.textbook.subject);
+    
+    // Image data if present
     if (newImage) {
       formData.append('image_public_id', newImage);
     }
 
     try {
-      const response = await fetch(`/posts/${editedPost.id}`, {
+      const response = await makeRequest(`/posts/${editedPost.id}`, {
         method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'X-CSRF-Token': csrfToken
-        },
         body: formData,
+        headers: {
+          // Remove Content-Type to let browser set it with boundary
+          'Accept': 'application/json'
+        }
       });
 
       if (!response.ok) {
@@ -198,16 +203,11 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
       }
 
       const updatedPost = await response.json();
-      updatePost(updatedPost);
+      if (onUpdatePost) {
+        onUpdatePost(updatedPost);
+      }
       setSuccessMessage('Post updated successfully!');
       
-      // Wait briefly to show success message
-      setTimeout(() => {
-        if (onUpdatePost) {
-          onUpdatePost(updatedPost);
-        }
-      }, 1000);
-
     } catch (error) {
       console.error('Error updating post:', error);
       setErrors({

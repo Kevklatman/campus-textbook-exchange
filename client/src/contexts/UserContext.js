@@ -154,6 +154,8 @@ export function UserProvider({ children }) {
       if (response.ok) {
         const data = await response.json();
         setUser(data);
+        setCsrfToken(data.csrf_token);
+        
         await Promise.all([
           fetchWatchlist(data.id),
           fetchNotifications(data.id)
@@ -179,6 +181,9 @@ export function UserProvider({ children }) {
         setWatchlistPosts([]);
         setNotifications([]);
         stopNotificationPolling();
+        setCsrfToken(null);
+        
+        localStorage.removeItem('csrf_token');
       }
     } catch (error) {
       console.error("Logout error:", error);
