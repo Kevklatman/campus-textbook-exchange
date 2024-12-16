@@ -883,4 +883,4 @@ api.add_resource(NotificationResource,
 )
 api.add_resource(UserResource, '/users', '/users/<int:user_id>')
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=5555, debug=True)
