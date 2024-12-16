@@ -2,3 +2,4 @@
 2024-12-16 12:58:11,650 INFO [app] Application initialization completed [in /Users/kevinklatman/Development/Code/phase-4/template/server/config.py:169]
 2024-12-16 12:58:12,686 DEBUG [app] Running in debug mode [in /Users/kevinklatman/Development/Code/phase-4/template/server/config.py:163]
 2024-12-16 12:58:12,686 INFO [app] Application initialization completed [in /Users/kevinklatman/Development/Code/phase-4/template/server/config.py:169]
+2024-12-16 13:00:51,941 DEBUG [app] Setting new password hash for user: carl@carl.edu [in /Users/kevinklatman/Development/Code/phase-4/template/server/models.py:56]

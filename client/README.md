@@ -68,3 +68,26 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+
+Improvement needed: 
+The system uses ISBN to identify unique textbooks. When a new post is created, it:
+First checks if a textbook with that ISBN already exists in the database
+If it exists, it reuses that textbook record
+If it doesn't exist, it creates a new textbook record
+Each post is a separate entity that:
+References the shared textbook (via textbook_id)
+Has its own:
+Price
+Condition
+User (seller)
+Location (latitude/longitude)
+Image
+Comments
+Watchlist entries
+This design means:
+Multiple users can sell the same textbook at different prices
+Each post is independent but links to the same textbook record
+Updates to textbook information (title, author, subject) affect all posts for that textbook
+Users can see different offers for the same textbook
+The watchlist system works per-post, not per-textbook
