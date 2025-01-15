@@ -199,14 +199,6 @@ PATCH /notifications/<id> - Mark notification as read
 ## 👏 Acknowledgments
 - Mom
 
-## 📧 Contact
-For questions or support, please email: campustextbookexchange@gmail.com
-
-## 🐛 Known Issues
-- Image upload size limited to 10MB
-- Email notifications may be delayed during high traffic
-- Search functionality limited to exact matches
-
 ## 🔜 Future Improvements
 - Add price history graphs
 - Implement in-app messaging
