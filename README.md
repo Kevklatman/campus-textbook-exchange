@@ -36,7 +36,6 @@ Campus Textbook Exchange is a full-stack web application that provides universit
 - React.js
 - Context API for state management
 - React Router for navigation
-- Tailwind CSS for styling
 - Cloudinary for image management
 
 ### Backend
