@@ -9,7 +9,7 @@ __pycache__/
 
 # Database
 *.db
-instance/
+server/instance/app.db
 *.sqlite3
 
 # Environment and Configuration
@@ -31,3 +31,4 @@ logs/
 # Temporary fix files
 fixed_flask_uploads.py
 flask_uploads_fix.py
+
