@@ -53,18 +53,17 @@ def haversine_distance(lat1, lon1, lat2, lon2):
 
 @app.after_request
 def after_request(response):
-    # Enable CORS
+    # Set CORS headers
     response.headers.update({
         'Access-Control-Allow-Origin': 'http://localhost:3000',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token',
         'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Access-Control-Expose-Headers': 'X-CSRF-Token'
     })
-    
-    # Ensure CSRF token is set in cookie
+    # Ensure CSRF token cookie is set
     if 'csrf_token' not in request.cookies:
-        token = generate_csrf()
+        token = session.get('csrf_token', generate_csrf())
         response.set_cookie(
             'csrf_token',
             token,
@@ -73,13 +72,12 @@ def after_request(response):
             samesite='Lax',
             path='/'
         )
-    
     return response
 
 @app.route('/csrf_token', methods=['GET'])
-@csrf.exempt
 def get_csrf_token():
     token = generate_csrf()
+    session['csrf_token'] = token
     response = jsonify({'csrf_token': token})
     response.set_cookie(
         'csrf_token',
@@ -89,39 +87,6 @@ def get_csrf_token():
         samesite='Lax',
         path='/'
     )
-    return response
-
-@app.before_request
-def csrf_protect():
-    if request.method not in ['GET', 'HEAD', 'OPTIONS']:
-        # Check if we have a token in the session
-        if 'csrf_token' not in session:
-            token = generate_csrf()
-            session['csrf_token'] = token
-
-@app.after_request
-def after_request(response):
-    # Ensure CSRF token cookie is set
-    if 'csrf_token' not in request.cookies:
-        token = session.get('csrf_token', generate_csrf())
-        response.set_cookie(
-            'csrf_token',
-            token,
-            secure=True,
-            httponly=False,
-            samesite='Lax',
-            path='/'
-        )
-    
-    # Set CORS headers
-    response.headers.update({
-        'Access-Control-Allow-Origin': 'http://localhost:3000',
-        'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Expose-Headers': 'X-CSRF-Token'
-    })
-    
     return response
 
 @app.errorhandler(CSRFError)
@@ -137,14 +102,6 @@ def handle_csrf_error(e):
 def index():
     return '<h1>Project Server</h1>'
 
-
-
-from flask import Flask, jsonify, request, make_response
-from flask_restful import Resource
-from models import Post, Textbook, User
-from sqlalchemy import func, or_
-from math import radians, cos, sin, asin, sqrt
-from datetime import datetime
 
 class PostResource(Resource):
     def haversine_distance(self, lat1, lon1, lat2, lon2):
@@ -582,7 +539,7 @@ class CommentResource(Resource):
             db.session.rollback()
             return {"message": str(e)}, 500
 
-    def delete(self, post_id, comment_id):
+    def delete(self, comment_id):
         try:
             # Verify CSRF token
             token = request.headers.get('X-CSRF-Token')
