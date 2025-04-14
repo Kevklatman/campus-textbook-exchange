@@ -307,7 +307,7 @@ class PostResource(Resource):
             if post.user_id != current_user.id:
                 return {"message": "Unauthorized"}, 401
 
-            data = request.form
+            data = request.form.to_dict() if request.form else (request.get_json() or {})
             if not data:
                 return {"message": "No input data provided"}, 400
 
