@@ -232,17 +232,6 @@ class PostResource(Resource):
                 if not data.get(field):
                     return {"message": f"{field} is required"}, 400
 
-            # Validate and process location data
-            latitude = data.get('latitude')
-            longitude = data.get('longitude')
-            if latitude and longitude:
-                try:
-                    latitude = float(latitude)
-                    longitude = float(longitude)
-                    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
-                        return {"message": "Invalid coordinates"}, 400
-                except ValueError:
-                    return {"message": "Invalid coordinates format"}, 400
 
             # Process ISBN
             try:
