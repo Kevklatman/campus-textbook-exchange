@@ -1,0 +1,1 @@
+Need some sort of api validation method so that we can confirm that the isbns entered by users exist in the real world, and so that if when someone posts a textbook for the very first time they use the wrong isbn, that doesnt end up being the wrong isbn recommended to every subsequent user
