@@ -10,6 +10,7 @@ import logging
 from cloudinary.uploader import upload
 from cloudinary.utils import cloudinary_url
 from flask import session
+from flask import jsonify
 from datetime import timedelta
 from flask_wtf.csrf import generate_csrf, CSRFError
 from functools import wraps
