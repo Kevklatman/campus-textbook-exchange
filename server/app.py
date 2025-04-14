@@ -130,9 +130,6 @@ class PostResource(Resource):
             if post_id is None:
                 # Get query parameters
                 user_id = request.args.get('user_id')
-                lat = request.args.get('lat')
-                lng = request.args.get('lng')
-                radius = request.args.get('radius', type=float, default=10)
                 sort_by = request.args.get('sort', default='date')  # 'date', 'price', or 'distance'
                 search_query = request.args.get('q')
                 subject = request.args.get('subject')
@@ -212,6 +209,7 @@ class PostResource(Resource):
                 post_data['user'] = post.user.to_dict()
                 post_data['textbook'] = post.textbook.to_dict()
                 post_data['comments'] = [comment.to_dict() for comment in post.comments]
+                print(post_data)
                 
                 return post_data, 200
 
@@ -263,8 +261,7 @@ class PostResource(Resource):
                 textbook=textbook,
                 price=data['price'],
                 condition=data['condition'],
-                latitude=latitude,
-                longitude=longitude
+
             )
             
             # Handle image
