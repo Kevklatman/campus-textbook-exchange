@@ -15,7 +15,7 @@ export function UserProvider({ children }) {
   // 1. Base utilities
   const fetchCsrfToken = useCallback(async () => {
     try {
-      const response = await fetch('/csrf_token', {
+      const response = await fetch('/api/csrf-token', {
         credentials: 'include',
         headers: {
           'Accept': 'application/json'

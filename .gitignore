@@ -20,3 +20,14 @@ venv/
 
 # Dependencies
 node_modules/
+
+# Flask Session files
+flask_session/
+
+# Logs
+logs/
+*.log
+
+# Temporary fix files
+fixed_flask_uploads.py
+flask_uploads_fix.py

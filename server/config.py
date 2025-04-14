@@ -109,6 +109,14 @@ csrf = CSRFProtect(app)
 def get_csrf():
     token = generate_csrf()
     response = jsonify({'csrf_token': token})
+    response.set_cookie(
+        'csrf_token',
+        token,
+        secure=False,  # Set to True in production with HTTPS
+        httponly=False,
+        samesite='Lax',
+        path='/'
+    )
     return response
 
 # Handle CSRF errors
