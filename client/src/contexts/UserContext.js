@@ -33,13 +33,16 @@ export function UserProvider({ children }) {
     }
   }, []);
 
-  const getHeaders = useCallback(() => {
+  const getHeaders = useCallback((body) => {
     const headers = {
       'Accept': 'application/json',
-      'Content-Type': 'application/json',
     };
     if (csrfToken) {
       headers['X-CSRF-Token'] = csrfToken;
+    }
+    // Only add Content-Type if not FormData
+    if (!(body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
     }
     return headers;
   }, [csrfToken]);
@@ -54,13 +57,15 @@ export function UserProvider({ children }) {
       }
     }
 
+    const body = options.body;
     const defaultOptions = {
       credentials: 'include',
       headers: {
-        ...getHeaders(),
+        ...getHeaders(body),
         'X-CSRF-Token': token
       },
     };
+
 
     const finalOptions = {
       ...defaultOptions,

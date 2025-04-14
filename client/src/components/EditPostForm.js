@@ -182,9 +182,17 @@ function EditPostForm({ post, onUpdatePost, onCancel }) {
     formData.append('isbn', editedPost.textbook.isbn);
     formData.append('subject', editedPost.textbook.subject);
     
+    // User ID (required by backend)
+    formData.append('user_id', user.id);
+
     // Image data if present
     if (newImage) {
       formData.append('image_public_id', newImage);
+    }
+
+    // Debug: Log all FormData entries
+    for (let pair of formData.entries()) {
+      console.log(pair[0]+ ': ' + pair[1]);
     }
 
     try {

@@ -64,7 +64,14 @@ function Home() {
 
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error('Failed to fetch posts');
+        let msg = 'Failed to fetch posts';
+        try {
+          const err = await response.json();
+          msg = err.message || msg;
+        } catch {
+          msg = await response.text();
+        }
+        throw new Error(msg);
       }
       const data = await response.json();
       setFilteredPosts(data);

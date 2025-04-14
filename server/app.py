@@ -10,7 +10,6 @@ import logging
 from cloudinary.uploader import upload
 from cloudinary.utils import cloudinary_url
 from flask import session
-from flask import jsonify
 from datetime import timedelta
 from flask_wtf.csrf import generate_csrf, CSRFError
 from functools import wraps
@@ -130,6 +129,9 @@ class PostResource(Resource):
             if post_id is None:
                 # Get query parameters
                 user_id = request.args.get('user_id')
+                lat = request.args.get('lat')
+                lng = request.args.get('lng')
+                radius = request.args.get('radius', type=float, default=10)
                 sort_by = request.args.get('sort', default='date')  # 'date', 'price', or 'distance'
                 search_query = request.args.get('q')
                 subject = request.args.get('subject')
@@ -209,7 +211,6 @@ class PostResource(Resource):
                 post_data['user'] = post.user.to_dict()
                 post_data['textbook'] = post.textbook.to_dict()
                 post_data['comments'] = [comment.to_dict() for comment in post.comments]
-                print(post_data)
                 
                 return post_data, 200
 
@@ -230,6 +231,17 @@ class PostResource(Resource):
                 if not data.get(field):
                     return {"message": f"{field} is required"}, 400
 
+            # Validate and process location data
+            latitude = data.get('latitude')
+            longitude = data.get('longitude')
+            if latitude and longitude:
+                try:
+                    latitude = float(latitude)
+                    longitude = float(longitude)
+                    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+                        return {"message": "Invalid coordinates"}, 400
+                except ValueError:
+                    return {"message": "Invalid coordinates format"}, 400
 
             # Process ISBN
             try:
@@ -261,7 +273,8 @@ class PostResource(Resource):
                 textbook=textbook,
                 price=data['price'],
                 condition=data['condition'],
-
+                latitude=latitude,
+                longitude=longitude
             )
             
             # Handle image
@@ -287,63 +300,75 @@ class PostResource(Resource):
 
     def put(self, post_id):
         try:
+            print(f"[PUT] Attempting to update post with ID: {post_id}")
             post = Post.query.get(post_id)
             if not post:
+                print(f"[PUT] Post not found for ID: {post_id}")
                 return {"message": "Post not found"}, 404
 
+            print(f"[PUT] Current user ID: {current_user.id}, Post user ID: {post.user_id}")
             if post.user_id != current_user.id:
+                print(f"[PUT] Unauthorized update attempt by user {current_user.id} on post {post_id}")
                 return {"message": "Unauthorized"}, 401
 
-            data = request.form.to_dict() if request.form else (request.get_json() or {})
+            print(f"[PUT] Raw request.form: {request.form}")
+            data = request.form.to_dict()
+            print(f"[PUT] Incoming data (from form): {data}")
             if not data:
+                print("[PUT] No input data provided (form data)")
                 return {"message": "No input data provided"}, 400
 
             # Store original price for comparison
             original_price = float(post.price)
+            print(f"[PUT] Original post price: {original_price}")
 
             # Update post fields
             if 'price' in data:
                 try:
                     post.price = float(data['price'])
+                    print(f"[PUT] Updated price to: {post.price}")
                 except ValueError:
+                    print(f"[PUT] Invalid price format: {data['price']}")
                     return {"message": "Invalid price format"}, 400
-                    
+            
             if 'condition' in data:
                 post.condition = data['condition']
+                print(f"[PUT] Updated condition to: {post.condition}")
 
             # Update textbook fields
             textbook = post.textbook
             if 'title' in data:
                 textbook.title = data['title']
+                print(f"[PUT] Updated textbook title to: {textbook.title}")
             if 'author' in data:
                 textbook.author = data['author']
+                print(f"[PUT] Updated textbook author to: {textbook.author}")
             if 'subject' in data:
                 textbook.subject = data['subject']
+                print(f"[PUT] Updated textbook subject to: {textbook.subject}")
             
             if 'isbn' in data:
-                try:
-                    isbn = str(data['isbn']).strip()
-                    if isbn:  # Only validate if ISBN is provided
-                        Textbook.validate_isbn(isbn)
-                        textbook.isbn = isbn
-                except ValueError as e:
-                    return {"message": str(e)}, 400
+               textbook.price=data['price']
 
             # Handle image update
             image_public_id = data.get('image_public_id')
             if image_public_id:
                 post.img = image_public_id
+                print(f"[PUT] Updated image public ID to: {image_public_id}")
 
             # Handle price drop notifications
             new_price = float(post.price)
+            print(f"[PUT] New price: {new_price}")
             if new_price < original_price:
+                print(f"[PUT] Price dropped from {original_price} to {new_price}, sending notifications.")
                 self._handle_price_drop_notification(post, original_price, new_price)
 
             try:
                 db.session.commit()
+                print(f"[PUT] Successfully committed DB changes for post {post_id}")
             except Exception as e:
                 db.session.rollback()
-                print("Database error:", str(e))
+                print(f"[PUT] Database error: {str(e)}")
                 return {"message": "Database error occurred"}, 500
 
             # Prepare response
@@ -351,12 +376,13 @@ class PostResource(Resource):
             post_data['textbook'] = textbook.to_dict()
             post_data['user'] = post.user.to_dict()
             post_data['image_url'] = post.image_url
+            print(f"[PUT] Returning updated post data: {post_data}")
 
             return post_data, 200
                 
         except Exception as e:
             db.session.rollback()
-            print("Error updating post:", str(e))
+            print(f"[PUT] Error updating post: {str(e)}")
             return {"message": "Error updating post", "error": str(e)}, 500
 
     def delete(self, post_id):
